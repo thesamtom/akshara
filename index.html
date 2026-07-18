@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Akshara Malayalam OCR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-color: #0b0f19;
+      --card-bg: rgba(22, 30, 49, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-color: #6366f1;
+      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      --accent-hover: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-glow: rgba(99, 102, 241, 0.15);
+      --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+      --border-radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top left, #1e1b4b 0%, #0b0f19 60%, #020617 100%);
+      color: var(--text-main);
+      font-family: 'Outfit', 'Inter', sans-serif;
+      padding: 24px;
+    }
+    main {
+      width: min(720px, 100%);
+      padding: 36px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+    h1 {
+      margin: 0 0 28px;
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(to right, #a5b4fc, #e9d5ff, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .upload {
+      min-height: 160px;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      border: 2px dashed rgba(99, 102, 241, 0.4);
+      border-radius: var(--border-radius);
+      text-align: center;
+      background: rgba(15, 23, 42, 0.4);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .upload:hover, .upload.dragging {
+      border-color: #a855f7;
+      background: rgba(99, 102, 241, 0.08);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+    }
+    .upload p {
+      margin: 0 0 16px;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      font-weight: 500;
+    }
+    input[type="file"] { display: none; }
+    button {
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 12px 24px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    #choose {
+      background: var(--accent-gradient);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    }
+    #choose:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    }
+    #convert {
+      width: 100%;
+      margin: 24px 0 16px;
+      background: var(--accent-gradient);
+      color: #fff;
+      font-size: 1rem;
+      padding: 14px;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+    #convert:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+    #convert:disabled {
+      background: #1e293b;
+      color: #475569;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .actions-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .actions-bar button {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .actions-bar button:hover:not(:disabled) {
+      background: #334155;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+    .actions-bar button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    #reading.active-reading {
+      background: #ef4444;
+      color: #fff;
+      animation: pulse-red 2s infinite;
+    }
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    #status {
+      min-height: 24px;
+      margin: 0 0 16px;
+      color: #a5b4fc;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .textareas-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--border-radius);
+      padding: 16px;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    textarea::placeholder {
+      color: #475569;
+    }
+    #comparison {
+      margin-top: 24px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--border-radius);
+      line-height: 2;
+      font-family: 'Inter', sans-serif;
+    }
+    #comparison:empty { display: none; }
+    .word {
+      display: inline-block;
+      margin: 0 4px 6px 0;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+      transition: all 0.2s ease;
+    }
+    .word.mistake {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .spoken {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      font-style: italic;
+    }
+    .filename { margin-top: 12px; font-size: 0.9rem; color: var(--text-muted); }
+    .captions-overlay {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 1.4rem;
+      font-weight: 600;
+      text-align: center;
+      max-width: 85%;
+      min-width: 320px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1000;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .captions-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Akshara Malayalam OCR</h1>
+
+    <label class="upload" id="upload-area" for="image-input">
+      <div>
+        <p>Drag an image here or choose one.</p>
+        <button type="button" id="choose">Choose Image</button>
+        <div class="filename" id="filename">No image selected</div>
+      </div>
+    </label>
+    <input id="image-input" type="file" accept="image/*" />
+
+    <button id="convert" type="button" disabled>Convert to Text</button>
+
+    <div class="actions-bar">
+      <button id="play" type="button" disabled>Play text</button>
+      <button id="pause" type="button" disabled>Pause</button>
+      <button id="reading" type="button" disabled>Start Reading</button>
+    </div>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <div class="textareas-container">
+      <textarea id="output" aria-label="Transcribed text" placeholder="Transcribed text will appear here."></textarea>
+      <textarea id="spoken-output" aria-label="Live spoken text" placeholder="What you say will appear here live." readonly></textarea>
+    </div>
+
+    <div id="comparison" aria-live="polite"></div>
+  </main>
+
+  <div id="captions-overlay" class="captions-overlay hidden">
+    <span id="captions-text"></span>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script>
+    const input = document.getElementById('image-input');
+    const uploadArea = document.getElementById('upload-area');
+    const chooseButton = document.getElementById('choose');
+    const convertButton = document.getElementById('convert');
+    const playButton = document.getElementById('play');
+    const pauseButton = document.getElementById('pause');
+    const readingButton = document.getElementById('reading');
+    const captionsOverlay = document.getElementById('captions-overlay');
+    const captionsText = document.getElementById('captions-text');
+    const filename = document.getElementById('filename');
+    const status = document.getElementById('status');
+    const output = document.getElementById('output');
+    const spokenOutput = document.getElementById('spoken-output');
+    const comparison = document.getElementById('comparison');
+    let imageFile = null;
+    let currentAudio = null;
+    let liveSocket = null;
+    let microphoneStream = null;
+    let audioContext = null;
+    let audioSource = null;
+    let audioProcessor = null;
+    let liveTranscript = '';
+    let stopRequested = false;
+    let autoStopTimer = null;
+    const AUTO_STOP_DELAY = 4500; // 4.5 seconds of silence to auto-stop
+
+    function selectFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        status.textContent = 'Please choose a valid image file.';
+        return;
+      }
+      imageFile = file;
+      filename.textContent = file.name;
+      convertButton.disabled = false;
+      status.textContent = '';
+    }
+
+    chooseButton.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => selectFile(input.files[0]));
+    ['dragenter', 'dragover'].forEach(eventName => uploadArea.addEventListener(eventName, event => {
+      event.preventDefault();
+      uploadArea.classList.add('dragging');
+    }));
+    ['dragleave', 'drop'].forEach(eventName => uploadArea.addEventListener(eventName, event => {
+      event.preventDefault();
+      uploadArea.classList.remove('dragging');
+    }));
+    uploadArea.addEventListener('drop', event => selectFile(event.dataTransfer.files[0]));
+
+    convertButton.addEventListener('click', async () => {
+      if (!imageFile) return;
+      convertButton.disabled = true;
+      output.value = '';
+      status.innerHTML = '<span class="spinner"></span>Loading OCR…';
+      try {
+        const result = await Tesseract.recognize(imageFile, 'mal', {
+          logger: message => {
+            if (message.status === 'recognizing text') {
+              status.innerHTML = `<span class="spinner"></span>Converting… ${Math.round(message.progress * 100)}%`;
+            }
+          }
+        });
+        output.value = result.data.text.trim();
+        playButton.disabled = !output.value;
+        readingButton.disabled = !output.value;
+        status.textContent = 'Conversion complete.';
+      } catch (error) {
+        console.error(error);
+        status.textContent = 'Conversion failed. Please try another image.';
+      } finally {
+        convertButton.disabled = false;
+      }
+    });
+
+    output.addEventListener('input', () => {
+      const hasText = Boolean(output.value.trim());
+      playButton.disabled = !hasText;
+      readingButton.disabled = !hasText;
+      comparison.innerHTML = '';
+      spokenOutput.value = '';
+    });
+
+    playButton.addEventListener('click', async () => {
+      const text = output.value.trim();
+      if (!text) return;
+      playButton.disabled = true;
+      status.innerHTML = '<span class="spinner"></span>Creating speech...';
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Speech generation failed.');
+        const bytes = Uint8Array.from(atob(payload.audio), character => character.charCodeAt(0));
+        if (currentAudio) currentAudio.pause();
+        currentAudio = new Audio(URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' })));
+        currentAudio.addEventListener('ended', () => {
+          pauseButton.disabled = true;
+          pauseButton.textContent = 'Pause';
+          status.textContent = 'Playback complete.';
+        });
+        await currentAudio.play();
+        pauseButton.disabled = false;
+        pauseButton.textContent = 'Pause';
+        status.textContent = 'Playing audio.';
+      } catch (error) {
+        console.error(error);
+        status.textContent = error.message || 'Speech generation failed.';
+      } finally {
+        playButton.disabled = false;
+      }
+    });
+
+    pauseButton.addEventListener('click', async () => {
+      if (!currentAudio) return;
+      if (currentAudio.paused) {
+        await currentAudio.play();
+        pauseButton.textContent = 'Pause';
+        status.textContent = 'Playing audio.';
+      } else {
+        currentAudio.pause();
+        pauseButton.textContent = 'Resume';
+        status.textContent = 'Audio paused.';
+      }
+    });
+
+    function normalizedWords(text) {
+      return text.normalize('NFC').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+    }
+
+    function renderComparison(expectedText, spokenText) {
+      const expected = normalizedWords(expectedText);
+      const spoken = normalizedWords(spokenText);
+      const rows = Array.from({ length: expected.length + 1 }, () => Array(spoken.length + 1).fill(0));
+      for (let i = 0; i <= expected.length; i++) rows[i][0] = i;
+      for (let j = 0; j <= spoken.length; j++) rows[0][j] = j;
+      for (let i = 1; i <= expected.length; i++) {
+        for (let j = 1; j <= spoken.length; j++) {
+          rows[i][j] = expected[i - 1] === spoken[j - 1]
+            ? rows[i - 1][j - 1]
+            : 1 + Math.min(rows[i - 1][j - 1], rows[i - 1][j], rows[i][j - 1]);
+        }
+      }
+      const mistakes = new Set();
+      let i = expected.length;
+      let j = spoken.length;
+      while (i || j) {
+        if (i && j && expected[i - 1] === spoken[j - 1]) { i--; j--; continue; }
+        if (i && j && rows[i][j] === rows[i - 1][j - 1] + 1) { mistakes.add(i - 1); i--; j--; continue; }
+        if (i && rows[i][j] === rows[i - 1][j] + 1) {
+          if (j) mistakes.add(i - 1);
+          i--;
+          continue;
+        }
+        j--;
+      }
+      comparison.innerHTML = '';
+      expected.forEach((word, index) => {
+        const span = document.createElement('span');
+        span.className = `word${mistakes.has(index) ? ' mistake' : ''}`;
+        span.textContent = word;
+        comparison.append(span);
+      });
+      const spokenLine = document.createElement('div');
+      spokenLine.className = 'spoken';
+      spokenLine.textContent = `You said: ${spokenText || '(no speech detected)'}`;
+      comparison.append(spokenLine);
+    }
+
+    function pcmChunkToBase64(samples, sourceRate) {
+      const ratio = sourceRate / 16000;
+      const length = Math.round(samples.length / ratio);
+      const bytes = new Uint8Array(length * 2);
+      for (let index = 0; index < length; index++) {
+        const sample = Math.max(-1, Math.min(1, samples[Math.min(samples.length - 1, Math.floor(index * ratio))]));
+        const value = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+        bytes[index * 2] = value & 0xff;
+        bytes[index * 2 + 1] = (value >> 8) & 0xff;
+      }
+      let binary = '';
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary);
+    }
+
+    function cleanupAudio() {
+      if (autoStopTimer) {
+        clearTimeout(autoStopTimer);
+        autoStopTimer = null;
+      }
+      if (audioProcessor) {
+        audioProcessor.disconnect();
+        audioProcessor = null;
+      }
+      if (audioSource) {
+        audioSource.disconnect();
+        audioSource = null;
+      }
+      if (audioContext) {
+        if (audioContext.state !== 'closed') {
+          audioContext.close();
+        }
+        audioContext = null;
+      }
+      if (microphoneStream) {
+        microphoneStream.getTracks().forEach(track => track.stop());
+        microphoneStream = null;
+      }
+      if (captionsOverlay) captionsOverlay.classList.add('hidden');
+      if (captionsText) captionsText.textContent = '';
+    }
+
+    function mergeTranscripts(oldText, newText) {
+      const oldClean = oldText.trim();
+      const newClean = newText.trim();
+      if (!oldClean) return newClean;
+      if (!newClean) return oldClean;
+
+      const cleanWord = w => w.normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+
+      const oldWords = oldClean.split(/\s+/);
+      const newWords = newClean.split(/\s+/);
+
+      const oldWordsClean = oldWords.map(cleanWord);
+      const newWordsClean = newWords.map(cleanWord);
+
+      let commonPrefixLength = 0;
+      const minLength = Math.min(oldWords.length, newWords.length);
+      for (let i = 0; i < minLength; i++) {
+        if (oldWordsClean[i] === newWordsClean[i]) {
+          commonPrefixLength = i + 1;
+        } else {
+          break;
+        }
+      }
+
+      if (commonPrefixLength > 0) {
+        const prefix = oldWords.slice(0, commonPrefixLength);
+        const suffix = newWords.slice(commonPrefixLength);
+        return prefix.concat(suffix).join(' ');
+      }
+
+      let overlapSize = 0;
+      const limit = Math.min(oldWords.length, newWords.length);
+      for (let size = 1; size <= limit; size++) {
+        const suffix = oldWordsClean.slice(oldWordsClean.length - size);
+        const prefix = newWordsClean.slice(0, size);
+        if (suffix.join(' ') === prefix.join(' ')) {
+          overlapSize = size;
+        }
+      }
+
+      if (overlapSize > 0) {
+        return oldWords.concat(newWords.slice(overlapSize)).join(' ');
+      }
+
+      return oldWords.concat(newWords).join(' ');
+    }
+
+    function resetAutoStopTimer() {
+      if (autoStopTimer) {
+        clearTimeout(autoStopTimer);
+      }
+      autoStopTimer = setTimeout(() => {
+        status.textContent = 'Auto-stopped reading due to silence.';
+        stopLiveReading();
+      }, AUTO_STOP_DELAY);
+    }
+
+    function stopLiveReading() {
+      stopRequested = true;
+      readingButton.disabled = true;
+      readingButton.textContent = 'Finishing...';
+      readingButton.classList.remove('active-reading');
+      cleanupAudio();
+      if (liveSocket && liveSocket.readyState === WebSocket.OPEN) {
+        liveSocket.send(JSON.stringify({ type: 'flush' }));
+        setTimeout(() => {
+          if (liveSocket) {
+            liveSocket.close();
+          }
+        }, 2000);
+      } else {
+        readingButton.disabled = false;
+        readingButton.textContent = 'Start Reading';
+      }
+    }
+
+    async function startLiveReading() {
+      if (!navigator.mediaDevices?.getUserMedia || !window.WebSocket) {
+        status.textContent = 'This browser does not support live microphone checking.';
+        return;
+      }
+      if (location.protocol === 'file:') {
+        status.textContent = 'Open http://127.0.0.1:8000 instead of opening index.html directly.';
+        return;
+      }
+      try {
+        const healthResponse = await fetch('/api/health');
+        const health = await healthResponse.json();
+        if (!health.sarvam_stt_configured) {
+          status.textContent = 'Add SARVAM_STT_API_KEY to .env and restart the local server before starting live reading.';
+          return;
+        }
+        stopRequested = false;
+        liveTranscript = '';
+        spokenOutput.value = '';
+        comparison.innerHTML = '';
+        readingButton.disabled = true;
+        readingButton.textContent = 'Connecting...';
+
+        try {
+          microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, noiseSuppression: true } });
+        } catch (err) {
+          status.textContent = 'Microphone access is required to check your reading.';
+          readingButton.disabled = false;
+          readingButton.textContent = 'Start Reading';
+          readingButton.classList.remove('active-reading');
+          return;
+        }
+
+        audioContext = new AudioContext();
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        audioSource = audioContext.createMediaStreamSource(microphoneStream);
+        audioProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+        audioProcessor.onaudioprocess = event => {
+          if (liveSocket?.readyState === WebSocket.OPEN) {
+            const data = pcmChunkToBase64(event.inputBuffer.getChannelData(0), audioContext.sampleRate);
+            liveSocket.send(JSON.stringify({ type: 'audio', data }));
+          }
+        };
+        audioSource.connect(audioProcessor);
+        audioProcessor.connect(audioContext.destination);
+
+        const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+        liveSocket = new WebSocket(`${scheme}://${location.host}/ws/reading`);
+
+        liveSocket.addEventListener('open', () => {
+          readingButton.disabled = false;
+          readingButton.textContent = 'Stop Reading';
+          readingButton.classList.add('active-reading');
+          status.textContent = 'Listening and checking your reading live...';
+          
+          if (captionsOverlay) captionsOverlay.classList.remove('hidden');
+          if (captionsText) captionsText.textContent = 'Listening...';
+          
+          resetAutoStopTimer();
+        });
+
+        liveSocket.addEventListener('message', event => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'error') {
+            status.textContent = data.error;
+            if (liveSocket) liveSocket.close();
+            return;
+          }
+          const transcript = data.data?.transcript || data.transcript;
+          if (transcript) {
+            liveTranscript = mergeTranscripts(liveTranscript, transcript);
+            spokenOutput.value = liveTranscript;
+            renderComparison(output.value, liveTranscript);
+            status.textContent = 'Checking your reading live. Red words need review.';
+            
+            if (captionsText) captionsText.textContent = transcript;
+            
+            resetAutoStopTimer();
+          }
+        });
+
+        liveSocket.addEventListener('error', () => {
+          status.textContent = 'Live transcription connection failed.';
+          cleanupAudio();
+          readingButton.classList.remove('active-reading');
+        });
+
+        liveSocket.addEventListener('close', () => {
+          cleanupAudio();
+          if (stopRequested) {
+            status.textContent = 'Reading check complete. Red words need review.';
+          } else {
+            status.textContent = 'Connection closed.';
+          }
+          readingButton.disabled = false;
+          readingButton.textContent = 'Start Reading';
+          readingButton.classList.remove('active-reading');
+          liveSocket = null;
+        });
+
+      } catch (error) {
+        cleanupAudio();
+        status.textContent = 'The local server is unavailable. Start it with the Sarvam API key, then reload this page.';
+        readingButton.disabled = false;
+        readingButton.textContent = 'Start Reading';
+        readingButton.classList.remove('active-reading');
+      }
+    }
+
+    readingButton.addEventListener('click', async () => {
+      if (liveSocket) {
+        stopLiveReading();
+      } else {
+        await startLiveReading();
+      }
+    });
+  </script>
+</body>
+</html>

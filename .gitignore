@@ -1,0 +1,6 @@
+.env
+*.key.json
+__pycache__/
+.pytest_cache/
+*.pyc
+.agents/

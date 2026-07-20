@@ -7,12 +7,31 @@ import logging
 import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+import mimetypes
 from urllib.request import Request, urlopen
 
 import websockets
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("application/json", ".json")
+mimetypes.add_type("application/wasm", ".wasm")
+mimetypes.add_type("application/gzip", ".gz")
+
+class PWAStaticFiles(StaticFiles):
+    def file_response(self, path: str, stat_result: os.stat_result, scope, status_code: int = 200):
+        response = super().file_response(path, stat_result, scope, status_code)
+        if path.endswith(".gz"):
+            response.media_type = "application/gzip"
+            response.headers["content-type"] = "application/gzip"
+        # Prevent caching of sw.js and manifest.json to allow instant updates
+        if path.endswith("sw.js") or path.endswith("manifest.json"):
+            response.headers["cache-control"] = "no-cache, no-store, must-revalidate"
+            response.headers["pragma"] = "no-cache"
+            response.headers["expires"] = "0"
+        return response
 
 ROOT = Path(__file__).resolve().parent
 SARVAM_STT_URL = (
@@ -40,6 +59,9 @@ def load_local_env() -> None:
 
 load_local_env()
 
+import definitions
+definitions.init_db()
+
 
 def api_key(kind: str) -> str:
     key = os.environ.get(f"SARVAM_{kind}_API_KEY")
@@ -55,6 +77,19 @@ async def health() -> JSONResponse:
         "sarvam_tts_configured": bool(os.environ.get("SARVAM_TTS_API_KEY")),
         "sarvam_stt_configured": bool(os.environ.get("SARVAM_STT_API_KEY")),
     })
+
+
+@app.get("/api/define")
+async def define_word(word: str) -> JSONResponse:
+    w = word.strip()
+    if not w:
+        raise HTTPException(400, "Word cannot be empty.")
+    try:
+        result = await asyncio.to_thread(definitions.lookup_word, w)
+        return JSONResponse(result)
+    except Exception as error:
+        logger.exception(f"Definition lookup failed for '{w}'")
+        raise HTTPException(500, "Could not load word definition.")
 
 
 def request_tts(text: str, key: str) -> str:
@@ -136,4 +171,4 @@ async def live_reading(client: WebSocket) -> None:
             await client.close(code=1011)
 
 
-app.mount("/", StaticFiles(directory=ROOT, html=True), name="static")
+app.mount("/", PWAStaticFiles(directory=ROOT, html=True), name="static")

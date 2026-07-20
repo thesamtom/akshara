@@ -4,51 +4,114 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Akshara Malayalam OCR</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => {
+            console.log('Service Worker registered:', reg.scope);
+            reg.update();
+          })
+          .catch(err => console.error('Service Worker failed:', err));
+      });
+
+      // Reload the page when the new service worker v3 takes control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
-      --bg-color: #0b0f19;
-      --card-bg: rgba(22, 30, 49, 0.7);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --accent-color: #6366f1;
-      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      --accent-hover: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-glow: rgba(99, 102, 241, 0.15);
-      --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-      --border-radius: 12px;
+      --bg-color: #232320;
+      --card-bg: #3A3A36;
+      --card-border: rgba(241, 239, 232, 0.08);
+      --text-main: #F1EFE8;
+      --text-muted: #A3A29E;
+      
+      /* Primary CTA / Accents */
+      --primary-cta: #0F6E56;
+      --primary-cta-hover: #0c5945;
+      --focus-highlight: #AFA9EC;
+      --focus-text: #232320;
+      
+      /* Magic Syllable coding (template) */
+      --syllable-1: #5DCAA5;
+      --syllable-2: #EF9F27;
+      --syllable-3: #ED93B1;
+      --syllable-4: #AFA9EC;
+      
+      /* Feedback highlights */
+      --word-correct: #639922;
+      --word-correct-bg: rgba(99, 153, 34, 0.12);
+      --word-correct-border: rgba(99, 153, 34, 0.25);
+      
+      --word-attention: #D85A30;
+      --word-attention-bg: rgba(216, 90, 48, 0.12);
+      --word-attention-border: rgba(216, 90, 48, 0.25);
+      
+      --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+      --border-radius: 16px;
     }
+
+    body.light-theme {
+      color-scheme: light;
+      --bg-color: #FBF3E1;
+      --card-bg: #FFFDF7;
+      --card-border: rgba(44, 44, 42, 0.08);
+      --text-main: #2C2C2A;
+      --text-muted: #5F5E5A;
+      --focus-highlight: #534AB7;
+      --focus-text: #ffffff;
+      --shadow: 0 10px 30px -10px rgba(95, 94, 90, 0.15);
+    }
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
-      background: radial-gradient(circle at top left, #1e1b4b 0%, #0b0f19 60%, #020617 100%);
+      background: radial-gradient(circle at top left, var(--card-bg) 0%, var(--bg-color) 70%, #171715 100%);
       color: var(--text-main);
       font-family: 'Outfit', 'Inter', sans-serif;
       padding: 24px;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+    body.light-theme {
+      background: radial-gradient(circle at top left, var(--card-bg) 0%, var(--bg-color) 70%, #EFE9D9 100%);
     }
     main {
       width: min(720px, 100%);
       padding: 36px;
       background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--card-border);
-      border-radius: 20px;
+      border-radius: 24px;
       box-shadow: var(--shadow);
+      transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
     }
     h1 {
       margin: 0 0 28px;
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 700;
       text-align: center;
-      background: linear-gradient(to right, #a5b4fc, #e9d5ff, #c084fc);
+      background: linear-gradient(to right, var(--primary-cta), var(--focus-highlight));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -0.5px;
@@ -58,17 +121,20 @@
       display: grid;
       place-items: center;
       padding: 32px;
-      border: 2px dashed rgba(99, 102, 241, 0.4);
+      border: 2px dashed var(--card-border);
       border-radius: var(--border-radius);
       text-align: center;
-      background: rgba(15, 23, 42, 0.4);
+      background: rgba(0, 0, 0, 0.08);
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+    body.light-theme .upload {
+      background: rgba(44, 44, 42, 0.03);
+    }
     .upload:hover, .upload.dragging {
-      border-color: #a855f7;
-      background: rgba(99, 102, 241, 0.08);
-      box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+      border-color: var(--primary-cta);
+      background: rgba(15, 110, 86, 0.05);
+      box-shadow: 0 0 20px rgba(15, 110, 86, 0.1);
     }
     .upload p {
       margin: 0 0 16px;
@@ -92,31 +158,46 @@
       gap: 8px;
     }
     #choose {
-      background: var(--accent-gradient);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+      background: var(--focus-highlight);
+      color: var(--focus-text);
+      box-shadow: 0 4px 12px rgba(83, 74, 183, 0.15);
     }
     #choose:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+      filter: brightness(1.1);
+    }
+    .upload-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    #take-photo {
+      background: var(--syllable-1);
+      color: #2C2C2A;
+      box-shadow: 0 4px 12px rgba(93, 202, 165, 0.15);
+    }
+    #take-photo:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.1);
     }
     #convert {
       width: 100%;
       margin: 24px 0 16px;
-      background: var(--accent-gradient);
+      background: var(--primary-cta);
       color: #fff;
       font-size: 1rem;
       padding: 14px;
-      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+      box-shadow: 0 4px 15px rgba(15, 110, 86, 0.2);
     }
     #convert:hover:not(:disabled) {
-      background: var(--accent-hover);
+      background: var(--primary-cta-hover);
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
     }
     #convert:disabled {
-      background: #1e293b;
-      color: #475569;
+      background: var(--card-border);
+      color: var(--text-muted);
       cursor: not-allowed;
       box-shadow: none;
     }
@@ -127,28 +208,37 @@
       margin-bottom: 16px;
     }
     .actions-bar button {
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      box-shadow: var(--shadow);
     }
     .actions-bar button:hover:not(:disabled) {
-      background: #334155;
-      border-color: rgba(255, 255, 255, 0.15);
-      color: #fff;
+      background: var(--bg-color);
+      border-color: var(--text-muted);
     }
     .actions-bar button:disabled {
       opacity: 0.35;
       cursor: not-allowed;
     }
-    #reading.active-reading {
-      background: #ef4444;
+    #reading {
+      background: var(--primary-cta);
       color: #fff;
-      animation: pulse-red 2s infinite;
+      border-color: transparent;
     }
-    @keyframes pulse-red {
-      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    #reading:hover:not(:disabled) {
+      background: var(--primary-cta-hover);
+    }
+    #reading.active-reading {
+      background: var(--word-attention);
+      color: #fff;
+      border-color: transparent;
+      animation: pulse-coral 2s infinite;
+    }
+    @keyframes pulse-coral {
+      0% { box-shadow: 0 0 0 0 rgba(216, 90, 48, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(216, 90, 48, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(216, 90, 48, 0); }
     }
     #status {
       min-height: 24px;
@@ -182,54 +272,168 @@
       width: 100%;
       min-height: 180px;
       resize: vertical;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--card-border);
       border-radius: var(--border-radius);
       padding: 16px;
-      color: #f1f5f9;
+      color: var(--text-main);
       font-family: 'Inter', sans-serif;
       font-size: 0.95rem;
       line-height: 1.6;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
+    body.light-theme textarea {
+      background: rgba(0, 0, 0, 0.02);
+    }
     textarea:focus {
       outline: none;
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      border-color: var(--focus-highlight);
+      box-shadow: 0 0 0 3px rgba(83, 74, 183, 0.15);
     }
     textarea::placeholder {
-      color: #475569;
+      color: var(--text-muted);
     }
     #comparison {
       margin-top: 24px;
       padding: 20px;
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--card-border);
       border-radius: var(--border-radius);
-      line-height: 2;
+      line-height: 2.2;
       font-family: 'Inter', sans-serif;
+    }
+    body.light-theme #comparison {
+      background: rgba(0, 0, 0, 0.01);
     }
     #comparison:empty { display: none; }
     .word {
       display: inline-block;
       margin: 0 4px 6px 0;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 1rem;
-      background: rgba(255, 255, 255, 0.05);
-      color: #cbd5e1;
-      transition: all 0.2s ease;
+      padding: 2px 10px;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 500;
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      transition: all 0.18s ease;
+      cursor: pointer;
+      user-select: none;
     }
-    .word.mistake {
-      background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+    .word:hover {
+      transform: translateY(-1px);
+      border-color: var(--focus-highlight);
+      box-shadow: 0 2px 10px rgba(83, 74, 183, 0.18);
+    }
+    .word.correct {
+      background: var(--word-correct-bg);
+      color: var(--word-correct);
+      border-color: var(--word-correct-border);
+    }
+    .word.mistake, .word.wrong {
+      background: var(--word-attention-bg);
+      color: var(--word-attention);
+      border-color: var(--word-attention-border);
+    }
+    .word.missing {
+      background: rgba(245, 158, 11, 0.12);
+      color: #f59e0b;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    body.light-theme .word.missing {
+      background: rgba(217, 119, 6, 0.1);
+      color: #d97706;
+      border-color: rgba(217, 119, 6, 0.3);
+    }
+    .word.current {
+      border: 1.5px dashed var(--focus-highlight);
+      box-shadow: 0 0 8px rgba(83, 74, 183, 0.12);
+      animation: pulse-current 1.5s infinite alternate;
+    }
+    @keyframes pulse-current {
+      from { transform: scale(1); }
+      to { transform: scale(1.03); }
+    }
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .comparison-stats {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .stat-badge.accuracy {
+      background: rgba(83, 74, 183, 0.15);
+      color: var(--focus-highlight);
+      border: 1px solid rgba(83, 74, 183, 0.3);
+    }
+    .stat-badge.correct {
+      background: var(--word-correct-bg);
+      color: var(--word-correct);
+      border: 1px solid var(--word-correct-border);
+    }
+    .stat-badge.wrong {
+      background: var(--word-attention-bg);
+      color: var(--word-attention);
+      border: 1px solid var(--word-attention-border);
+    }
+    .stat-badge.missing {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    .transcript-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--card-border);
+    }
+    .spoken-words-container {
+      line-height: 2.2;
+    }
+    .spoken-word {
+      display: inline-block;
+      margin: 0 4px 6px 0;
+      padding: 2px 10px;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+    .spoken-word.correct {
+      background: var(--word-correct-bg);
+      color: var(--word-correct);
+      border-color: var(--word-correct-border);
+    }
+    .spoken-word.wrong {
+      background: var(--word-attention-bg);
+      color: var(--word-attention);
+      border-color: var(--word-attention-border);
+    }
+    @keyframes pulse-current {
+      from { transform: scale(1); }
+      to { transform: scale(1.03); }
     }
     .spoken {
       margin-top: 16px;
       padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      color: #94a3b8;
+      border-top: 1px solid var(--card-border);
+      color: var(--text-muted);
       font-size: 0.95rem;
       white-space: pre-wrap;
       font-style: italic;
@@ -240,8 +444,8 @@
       bottom: 40px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.95);
-      color: #ffffff;
+      background: var(--card-bg);
+      color: var(--text-main);
       padding: 14px 28px;
       border-radius: 12px;
       font-size: 1.4rem;
@@ -249,8 +453,8 @@
       text-align: center;
       max-width: 85%;
       min-width: 320px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--card-border);
       z-index: 1000;
       pointer-events: none;
       transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -259,20 +463,164 @@
       opacity: 0;
       pointer-events: none;
     }
+    #theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    #theme-toggle:hover {
+      transform: scale(1.05);
+      background: var(--bg-color);
+      color: var(--primary-cta);
+    }
+    #theme-toggle svg {
+      width: 20px;
+      height: 20px;
+    }
+    body.light-theme .sun-icon { display: none; }
+    body.light-theme .moon-icon { display: block; }
+    body:not(.light-theme) .sun-icon { display: block; }
+    body:not(.light-theme) .moon-icon { display: none; }
+    .offline-indicator {
+      width: 100%;
+      background: #b91c1c;
+      color: #fff;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 2000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      animation: slide-down 0.3s ease;
+    }
+    .offline-indicator.hidden {
+      display: none;
+    }
+    #definition-popup {
+      position: fixed;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 1002;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      width: 280px;
+      box-shadow: var(--shadow);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      line-height: 1.5;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    #definition-popup.show {
+      visibility: visible;
+      pointer-events: auto;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #definition-popup.popup-below {
+      transform: translateY(8px);
+    }
+    #definition-popup.popup-below.show {
+      transform: translateY(0);
+    }
+    #definition-popup .def-word {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 2px;
+      color: var(--focus-highlight);
+    }
+    #definition-popup .def-pos {
+      font-size: 0.8rem;
+      font-style: italic;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    #definition-popup .def-meaning {
+      margin-bottom: 10px;
+    }
+    #definition-popup .def-attribution {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+    #definition-popup .def-attribution a {
+      color: var(--focus-highlight);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    #definition-popup .def-attribution a:hover {
+      text-decoration: underline;
+    }
+    #definition-popup .def-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-muted);
+      padding: 8px 0;
+    }
+    #definition-popup .def-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--card-border);
+      border-top-color: var(--focus-highlight);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
   </style>
 </head>
 <body>
+  <button id="theme-toggle" aria-label="Toggle Theme" type="button">
+    <!-- Sun Icon (shown in dark mode) -->
+    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <!-- Moon Icon (shown in light mode) -->
+    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+    </svg>
+  </button>
   <main>
     <h1>Akshara Malayalam OCR</h1>
 
-    <label class="upload" id="upload-area" for="image-input">
+    <div class="upload" id="upload-area">
       <div>
-        <p>Drag an image here or choose one.</p>
-        <button type="button" id="choose">Choose Image</button>
+        <p>Drag an image here, choose one, or capture a photo.</p>
+        <div class="upload-buttons">
+          <button type="button" id="choose">Choose Image</button>
+          <button type="button" id="take-photo">Take Photo</button>
+        </div>
         <div class="filename" id="filename">No image selected</div>
       </div>
-    </label>
+    </div>
     <input id="image-input" type="file" accept="image/*" />
+    <input id="camera-input" type="file" accept="image/*" capture="environment" />
 
     <button id="convert" type="button" disabled>Convert to Text</button>
 
@@ -286,7 +634,6 @@
 
     <div class="textareas-container">
       <textarea id="output" aria-label="Transcribed text" placeholder="Transcribed text will appear here."></textarea>
-      <textarea id="spoken-output" aria-label="Live spoken text" placeholder="What you say will appear here live." readonly></textarea>
     </div>
 
     <div id="comparison" aria-live="polite"></div>
@@ -297,11 +644,15 @@
   </div>
 
 
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <div id="definition-popup" role="dialog" aria-label="Word Definition"></div>
+
+  <script src="/static/tesseract/tesseract.min.js"></script>
   <script>
     const input = document.getElementById('image-input');
+    const cameraInput = document.getElementById('camera-input');
     const uploadArea = document.getElementById('upload-area');
     const chooseButton = document.getElementById('choose');
+    const takePhotoButton = document.getElementById('take-photo');
     const convertButton = document.getElementById('convert');
     const playButton = document.getElementById('play');
     const pauseButton = document.getElementById('pause');
@@ -338,6 +689,8 @@
 
     chooseButton.addEventListener('click', () => input.click());
     input.addEventListener('change', () => selectFile(input.files[0]));
+    takePhotoButton.addEventListener('click', () => cameraInput.click());
+    cameraInput.addEventListener('change', () => selectFile(cameraInput.files[0]));
     ['dragenter', 'dragover'].forEach(eventName => uploadArea.addEventListener(eventName, event => {
       event.preventDefault();
       uploadArea.classList.add('dragging');
@@ -352,18 +705,31 @@
       if (!imageFile) return;
       convertButton.disabled = true;
       output.value = '';
-      status.innerHTML = '<span class="spinner"></span>Loading OCR…';
+      status.innerHTML = '<span class="spinner"></span>Loading local OCR core…';
       try {
-        const result = await Tesseract.recognize(imageFile, 'mal', {
+        const worker = await Tesseract.createWorker('mal', 1, {
+          workerPath: '/static/tesseract/worker.min.js',
+          corePath: '/static/tesseract/',
+          langPath: '/static/tesseract/tessdata/',
           logger: message => {
-            if (message.status === 'recognizing text') {
+            if (message.status === 'loading language traineddata') {
+              status.innerHTML = '<span class="spinner"></span>Loading Malayalam model (~12MB, cached on first run)…';
+            } else if (message.status === 'recognizing text') {
               status.innerHTML = `<span class="spinner"></span>Converting… ${Math.round(message.progress * 100)}%`;
+            } else {
+              status.innerHTML = `<span class="spinner"></span>Preparing: ${message.status}…`;
             }
           }
         });
+
+        const result = await worker.recognize(imageFile);
+        await worker.terminate();
+
         output.value = result.data.text.trim();
-        playButton.disabled = !output.value;
-        readingButton.disabled = !output.value;
+        const isOnline = navigator.onLine;
+        playButton.disabled = !output.value || !isOnline;
+        readingButton.disabled = !output.value || !isOnline;
+        renderComparison(output.value, '');
         status.textContent = 'Conversion complete.';
       } catch (error) {
         console.error(error);
@@ -375,10 +741,61 @@
 
     output.addEventListener('input', () => {
       const hasText = Boolean(output.value.trim());
-      playButton.disabled = !hasText;
-      readingButton.disabled = !hasText;
-      comparison.innerHTML = '';
-      spokenOutput.value = '';
+      const isOnline = navigator.onLine;
+      playButton.disabled = !hasText || !isOnline;
+      readingButton.disabled = !hasText || !isOnline;
+      renderComparison(output.value, liveTranscript);
+    });
+
+    // Definition hover: show on mouseenter, hide on mouseleave (with small delay)
+    let hoverTimer = null;
+    let hideTimer = null;
+
+    comparison.addEventListener('mouseenter', (event) => {
+      const wordSpan = event.target.closest('.word');
+      if (!wordSpan) return;
+      clearTimeout(hideTimer);
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        showWordDefinition(wordSpan.textContent.trim(), wordSpan);
+      }, 300); // small delay so fast mouse movements don't spam API
+    }, true);
+
+    comparison.addEventListener('mouseleave', (event) => {
+      const wordSpan = event.target.closest('.word');
+      if (!wordSpan) return;
+      clearTimeout(hoverTimer);
+      const popup = document.getElementById('definition-popup');
+      hideTimer = setTimeout(() => {
+        if (!popup.matches(':hover')) {
+          popup.classList.remove('show', 'popup-below');
+        }
+      }, 200);
+    }, true);
+
+    // Keep popup open while hovering over it
+    const defPopup = document.getElementById('definition-popup');
+    if (defPopup) {
+      defPopup.addEventListener('mouseenter', () => {
+        clearTimeout(hideTimer);
+      });
+      defPopup.addEventListener('mouseleave', () => {
+        hideTimer = setTimeout(() => defPopup.classList.remove('show', 'popup-below'), 150);
+      });
+    }
+
+    // Click: play pronunciation (tap on mobile also triggers this)
+    comparison.addEventListener('click', (event) => {
+      const wordSpan = event.target.closest('.word');
+      if (!wordSpan) return;
+      event.stopPropagation();
+      const word = wordSpan.textContent.trim();
+      if (!word) return;
+      playWordPronunciation(word);
+      // On touch/mobile, also show definition on tap since hover doesn't exist
+      if (!window.matchMedia('(hover: hover)').matches) {
+        showWordDefinition(word, wordSpan);
+      }
     });
 
     playButton.addEventListener('click', async () => {
@@ -428,46 +845,155 @@
     });
 
     function normalizedWords(text) {
-      return text.normalize('NFC').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+      // \p{M} preserves Malayalam vowel signs, virama, etc. so words aren't fragmented
+      return text.normalize('NFC').replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
     }
-
     function renderComparison(expectedText, spokenText) {
       const expected = normalizedWords(expectedText);
       const spoken = normalizedWords(spokenText);
-      const rows = Array.from({ length: expected.length + 1 }, () => Array(spoken.length + 1).fill(0));
-      for (let i = 0; i <= expected.length; i++) rows[i][0] = i;
-      for (let j = 0; j <= spoken.length; j++) rows[0][j] = j;
-      for (let i = 1; i <= expected.length; i++) {
-        for (let j = 1; j <= spoken.length; j++) {
-          rows[i][j] = expected[i - 1] === spoken[j - 1]
-            ? rows[i - 1][j - 1]
-            : 1 + Math.min(rows[i - 1][j - 1], rows[i - 1][j], rows[i][j - 1]);
+
+      if (!expected.length) {
+        comparison.innerHTML = '';
+        return;
+      }
+
+      // Default state before reading starts
+      if (!spoken.length) {
+        comparison.innerHTML = '';
+        const targetLabel = document.createElement('div');
+        targetLabel.className = 'section-label';
+        targetLabel.textContent = 'Book Text (Tap/Hover for pronunciation & meaning):';
+        comparison.append(targetLabel);
+
+        const expectedContainer = document.createElement('div');
+        expectedContainer.className = 'expected-words-container';
+        expected.forEach((word) => {
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = word;
+          expectedContainer.append(span);
+        });
+        comparison.append(expectedContainer);
+        return;
+      }
+
+      // Needleman-Wunsch / Levenshtein Sequence Alignment
+      const m = expected.length;
+      const n = spoken.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (expected[i - 1] === spoken[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1];
+          } else {
+            dp[i][j] = 1 + Math.min(
+              dp[i - 1][j - 1], // substitution (said wrong)
+              dp[i - 1][j],     // deletion (missing word)
+              dp[i][j - 1]      // insertion (extra word)
+            );
+          }
         }
       }
-      const mistakes = new Set();
-      let i = expected.length;
-      let j = spoken.length;
-      while (i || j) {
-        if (i && j && expected[i - 1] === spoken[j - 1]) { i--; j--; continue; }
-        if (i && j && rows[i][j] === rows[i - 1][j - 1] + 1) { mistakes.add(i - 1); i--; j--; continue; }
-        if (i && rows[i][j] === rows[i - 1][j] + 1) {
-          if (j) mistakes.add(i - 1);
+
+      const expectedStatus = Array(m).fill('missing'); // 'correct', 'wrong', 'missing'
+      const spokenStatus = Array(n).fill('extra');     // 'correct', 'wrong', 'extra'
+
+      let i = m;
+      let j = n;
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && expected[i - 1] === spoken[j - 1]) {
+          expectedStatus[i - 1] = 'correct';
+          spokenStatus[j - 1] = 'correct';
           i--;
-          continue;
+          j--;
+        } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+          expectedStatus[i - 1] = 'wrong';
+          spokenStatus[j - 1] = 'wrong';
+          i--;
+          j--;
+        } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
+          expectedStatus[i - 1] = 'missing';
+          i--;
+        } else {
+          spokenStatus[j - 1] = 'extra';
+          j--;
         }
-        j--;
       }
+
+      // Calculate statistics
+      const correctCount = expectedStatus.filter(s => s === 'correct').length;
+      const wrongCount = expectedStatus.filter(s => s === 'wrong').length + spokenStatus.filter(s => s === 'extra').length;
+      const missingCount = expectedStatus.filter(s => s === 'missing').length;
+      const accuracy = Math.round((correctCount / m) * 100);
+
       comparison.innerHTML = '';
+
+      // 1. Stats Bar
+      const statsDiv = document.createElement('div');
+      statsDiv.className = 'comparison-stats';
+      statsDiv.innerHTML = `
+        <span class="stat-badge accuracy">${accuracy}% Accuracy</span>
+        <span class="stat-badge correct">✓ ${correctCount} Correct</span>
+        ${wrongCount > 0 ? `<span class="stat-badge wrong">✗ ${wrongCount} Said Wrong</span>` : ''}
+        ${missingCount > 0 ? `<span class="stat-badge missing">? ${missingCount} Missing</span>` : ''}
+      `;
+      comparison.append(statsDiv);
+
+      // 2. Expected Text Container
+      const targetLabel = document.createElement('div');
+      targetLabel.className = 'section-label';
+      targetLabel.textContent = 'Book Text:';
+      comparison.append(targetLabel);
+
+      const expectedContainer = document.createElement('div');
+      expectedContainer.className = 'expected-words-container';
+
+      let currentWordIndex = expectedStatus.findIndex(s => s === 'missing');
+
       expected.forEach((word, index) => {
         const span = document.createElement('span');
-        span.className = `word${mistakes.has(index) ? ' mistake' : ''}`;
+        const statusClass = expectedStatus[index]; // 'correct', 'wrong', 'missing'
+        let stateClass = ` ${statusClass}`;
+        if (index === currentWordIndex && liveSocket) {
+          stateClass += ' current';
+        }
+        span.className = `word${stateClass}`;
         span.textContent = word;
-        comparison.append(span);
+        if (statusClass === 'missing') {
+          span.title = 'Missing word (not read yet)';
+        } else if (statusClass === 'wrong') {
+          span.title = 'Said wrong';
+        }
+        expectedContainer.append(span);
       });
-      const spokenLine = document.createElement('div');
-      spokenLine.className = 'spoken';
-      spokenLine.textContent = `You said: ${spokenText || '(no speech detected)'}`;
-      comparison.append(spokenLine);
+      comparison.append(expectedContainer);
+
+      // 3. Transcribed Speech Section
+      const transcriptSection = document.createElement('div');
+      transcriptSection.className = 'transcript-section';
+
+      const spokenLabel = document.createElement('div');
+      spokenLabel.className = 'section-label';
+      spokenLabel.textContent = 'Transcribed Speech:';
+      transcriptSection.append(spokenLabel);
+
+      const spokenContainer = document.createElement('div');
+      spokenContainer.className = 'spoken-words-container';
+
+      spoken.forEach((word, index) => {
+        const span = document.createElement('span');
+        const statusClass = spokenStatus[index] === 'correct' ? 'correct' : 'wrong';
+        span.className = `spoken-word ${statusClass}`;
+        span.textContent = word;
+        spokenContainer.append(span);
+      });
+
+      transcriptSection.append(spokenContainer);
+      comparison.append(transcriptSection);
     }
 
     function pcmChunkToBase64(samples, sourceRate) {
@@ -606,7 +1132,7 @@
         }
         stopRequested = false;
         liveTranscript = '';
-        spokenOutput.value = '';
+        if (spokenOutput) spokenOutput.value = '';
         comparison.innerHTML = '';
         readingButton.disabled = true;
         readingButton.textContent = 'Connecting...';
@@ -661,9 +1187,9 @@
           const transcript = data.data?.transcript || data.transcript;
           if (transcript) {
             liveTranscript = mergeTranscripts(liveTranscript, transcript);
-            spokenOutput.value = liveTranscript;
+            if (spokenOutput) spokenOutput.value = liveTranscript;
             renderComparison(output.value, liveTranscript);
-            status.textContent = 'Checking your reading live. Red words need review.';
+            status.textContent = 'Checking your reading live. Green words are correct, Coral words were said wrong, Amber words are missing.';
             
             if (captionsText) captionsText.textContent = transcript;
             
@@ -680,7 +1206,7 @@
         liveSocket.addEventListener('close', () => {
           cleanupAudio();
           if (stopRequested) {
-            status.textContent = 'Reading check complete. Red words need review.';
+            status.textContent = 'Reading check complete. Coral words need review, green words are correct.';
           } else {
             status.textContent = 'Connection closed.';
           }
@@ -704,6 +1230,173 @@
         stopLiveReading();
       } else {
         await startLiveReading();
+      }
+    });
+
+    function updateOnlineStatus() {
+      const isOnline = navigator.onLine;
+      const playBtn = document.getElementById('play');
+      const pauseBtn = document.getElementById('pause');
+      const readingBtn = document.getElementById('reading');
+      let offlineIndicator = document.getElementById('offline-indicator');
+
+      if (isOnline) {
+        if (offlineIndicator) {
+          offlineIndicator.classList.add('hidden');
+        }
+        const hasText = Boolean(output.value.trim());
+        playBtn.disabled = !hasText;
+        readingBtn.disabled = !hasText;
+        if (status.textContent.includes('Offline Mode')) {
+          status.textContent = '';
+        }
+      } else {
+        if (!offlineIndicator) {
+          offlineIndicator = document.createElement('div');
+          offlineIndicator.id = 'offline-indicator';
+          offlineIndicator.className = 'offline-indicator';
+          offlineIndicator.textContent = 'Offline Mode — Offline OCR Available (TTS/Live Reading disabled)';
+          document.body.prepend(offlineIndicator);
+        } else {
+          offlineIndicator.classList.remove('hidden');
+        }
+        playBtn.disabled = true;
+        pauseBtn.disabled = true;
+        readingBtn.disabled = true;
+        status.textContent = 'Offline Mode — Offline OCR Available (TTS/Live Reading disabled)';
+      }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    // Light/Dark Theme Switching and State Management
+    const themeToggleBtn = document.getElementById('theme-toggle');
+
+    function setTheme(theme) {
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        localStorage.setItem('akshara-theme', 'light');
+      } else {
+        document.body.classList.remove('light-theme');
+        localStorage.setItem('akshara-theme', 'dark');
+      }
+      updateOnlineStatus();
+    }
+
+    // Load saved preference or check system prefers-color-scheme
+    const savedTheme = localStorage.getItem('akshara-theme');
+    const systemPrefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    if (savedTheme === 'light' || (!savedTheme && systemPrefersLight)) {
+      setTheme('light');
+    } else {
+      setTheme('dark');
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const isCurrentlyLight = document.body.classList.contains('light-theme');
+      setTheme(isCurrentlyLight ? 'dark' : 'light');
+    });
+
+    let wordAudio = null;
+    async function playWordPronunciation(word) {
+      if (!navigator.onLine) return;
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: word })
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const bytes = Uint8Array.from(atob(payload.audio), char => char.charCodeAt(0));
+        if (wordAudio) wordAudio.pause();
+        wordAudio = new Audio(URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' })));
+        await wordAudio.play();
+      } catch (error) {
+        console.error('Word pronunciation failed:', error);
+      }
+    }
+
+    async function showWordDefinition(word, element) {
+      const popup = document.getElementById('definition-popup');
+      popup.classList.remove('show', 'popup-below');
+      popup.innerHTML = `
+        <div class="def-loading">
+          <span class="def-spinner"></span>
+          <span>Loading meaning...</span>
+        </div>
+      `;
+
+      // Position using viewport coordinates (popup is position:fixed)
+      const rect = element.getBoundingClientRect();
+      const popupWidth = 280;
+      const left = rect.left + (rect.width / 2) - (popupWidth / 2);
+      const maxLeft = window.innerWidth - popupWidth - 16;
+      popup.style.left = `${Math.max(16, Math.min(left, maxLeft))}px`;
+      popup.style.transform = '';
+
+      // Prefer above the word, fall back to below if too close to top
+      const spaceAbove = rect.top;
+      if (spaceAbove < 180) {
+        popup.style.top = `${rect.bottom + 12}px`;
+        popup.classList.add('popup-below');
+      } else {
+        // Place above: anchor bottom of popup to top of word
+        popup.style.top = `${rect.top - 12}px`;
+        popup.style.transform = 'translateY(-100%)';
+        popup.classList.remove('popup-below');
+      }
+
+      // Show with animation (set class AFTER positioning so transition starts correctly)
+      requestAnimationFrame(() => {
+        popup.classList.add('show');
+      });
+
+      try {
+        const response = await fetch(`/api/define?word=${encodeURIComponent(word)}`);
+        if (!response.ok) throw new Error('Network error');
+        const data = await response.json();
+        if (data.found) {
+          popup.innerHTML = `
+            <div class="def-word">${escapeHtml(data.word)}</div>
+            ${data.part_of_speech ? `<div class="def-pos">${escapeHtml(data.part_of_speech)}</div>` : ''}
+            <div class="def-meaning">${escapeHtml(data.definition)}</div>
+            <div class="def-attribution">
+              ${escapeHtml(data.attribution)}
+              ${data.source_url ? `<br/><a href="${escapeHtml(data.source_url)}" target="_blank" rel="noopener">View source on Wiktionary &rarr;</a>` : ''}
+            </div>
+          `;
+        } else {
+          popup.innerHTML = `
+            <div class="def-word">${escapeHtml(word)}</div>
+            <div class="def-meaning" style="font-style: italic; color: var(--text-muted);">No definition available for this word yet.</div>
+          `;
+        }
+      } catch (error) {
+        popup.innerHTML = `
+          <div class="def-word">${escapeHtml(word)}</div>
+          <div class="def-meaning" style="color: var(--word-attention);">Couldn't load definition right now.</div>
+        `;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    document.addEventListener('click', (event) => {
+      const popup = document.getElementById('definition-popup');
+      if (popup && popup.classList.contains('show') && !popup.contains(event.target)) {
+        popup.classList.remove('show');
+        popup.classList.remove('popup-below');
       }
     });
   </script>

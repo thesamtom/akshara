@@ -845,10 +845,16 @@
     });
 
     function normalizedWords(text) {
-      // \p{M} preserves Malayalam vowel signs, virama, etc. so words aren't fragmented
-      return text.normalize('NFC').replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+      // \p{M} preserves Malayalam vowel signs, virama, etc. Strip zero-width joiners and non-letter symbols
+      return text
+        .normalize('NFC')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
     }
-    function renderComparison(expectedText, spokenText) {
+    async function renderComparison(expectedText, spokenText) {
       const expected = normalizedWords(expectedText);
       const spoken = normalizedWords(spokenText);
 
@@ -877,50 +883,62 @@
         return;
       }
 
-      // Needleman-Wunsch / Levenshtein Sequence Alignment
-      const m = expected.length;
-      const n = spoken.length;
-      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-
-      for (let i = 0; i <= m; i++) dp[i][0] = i;
-      for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-      for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-          if (expected[i - 1] === spoken[j - 1]) {
-            dp[i][j] = dp[i - 1][j - 1];
-          } else {
-            dp[i][j] = 1 + Math.min(
-              dp[i - 1][j - 1], // substitution (said wrong)
-              dp[i - 1][j],     // deletion (missing word)
-              dp[i][j - 1]      // insertion (extra word)
-            );
-          }
+      // Try server-side Sandhi-tolerant alignment first
+      let expectedStatus = [];
+      let spokenStatus = [];
+      try {
+        const resp = await fetch('/api/compare_reading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expected: expectedText, spoken: spokenText })
+        });
+        if (resp.ok) {
+          const alignData = await resp.json();
+          expectedStatus = alignData.expected_status || [];
+          spokenStatus = alignData.spoken_status || [];
         }
+      } catch (e) {
+        // Fall back to client alignment if offline
       }
 
-      const expectedStatus = Array(m).fill('missing'); // 'correct', 'wrong', 'missing'
-      const spokenStatus = Array(n).fill('extra');     // 'correct', 'wrong', 'extra'
+      const m = expected.length;
+      const n = spoken.length;
 
-      let i = m;
-      let j = n;
-      while (i > 0 || j > 0) {
-        if (i > 0 && j > 0 && expected[i - 1] === spoken[j - 1]) {
-          expectedStatus[i - 1] = 'correct';
-          spokenStatus[j - 1] = 'correct';
-          i--;
-          j--;
-        } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
-          expectedStatus[i - 1] = 'wrong';
-          spokenStatus[j - 1] = 'wrong';
-          i--;
-          j--;
-        } else if (i > 0 && (j === 0 || dp[i][j] === dp[i - 1][j] + 1)) {
-          expectedStatus[i - 1] = 'missing';
-          i--;
-        } else {
-          spokenStatus[j - 1] = 'extra';
-          j--;
+      if (!expectedStatus.length || expectedStatus.length !== m) {
+        // Fallback sequence alignment
+        const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            if (expected[i - 1] === spoken[j - 1]) {
+              dp[i][j] = dp[i - 1][j - 1];
+            } else {
+              dp[i][j] = 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+            }
+          }
+        }
+
+        expectedStatus = Array(m).fill('missing');
+        spokenStatus = Array(n).fill('extra');
+        let i = m, j = n;
+        while (i > 0 || j > 0) {
+          if (i > 0 && j > 0 && expected[i - 1] === spoken[j - 1]) {
+            expectedStatus[i - 1] = 'correct';
+            spokenStatus[j - 1] = 'correct';
+            i--; j--;
+          } else if (i > 0 && (j === 0 || (dp[i - 1][j] <= dp[i - 1][j - 1] && dp[i - 1][j] <= dp[i][j - 1]))) {
+            expectedStatus[i - 1] = 'missing';
+            i--;
+          } else if (j > 0 && (i === 0 || (dp[i][j - 1] <= dp[i - 1][j - 1] && dp[i][j - 1] <= dp[i - 1][j]))) {
+            spokenStatus[j - 1] = 'extra';
+            j--;
+          } else {
+            expectedStatus[i - 1] = 'wrong';
+            spokenStatus[j - 1] = 'wrong';
+            i--; j--;
+          }
         }
       }
 
@@ -1124,7 +1142,9 @@
         return;
       }
       try {
-        const healthResponse = await fetch('/api/health');
+        const healthResponse = await fetch('/api/health', {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const health = await healthResponse.json();
         if (!health.sarvam_stt_configured) {
           status.textContent = 'Add SARVAM_STT_API_KEY to .env and restart the local server before starting live reading.';
@@ -1355,16 +1375,22 @@
       });
 
       try {
-        const response = await fetch(`/api/define?word=${encodeURIComponent(word)}`);
+        const response = await fetch(`/api/define?word=${encodeURIComponent(word)}`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         if (!response.ok) throw new Error('Network error');
         const data = await response.json();
         if (data.found) {
+          const isPartial = Boolean(data.partial_match);
+          const badgeHtml = isPartial
+            ? `<span class="component-badge" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; display: inline-block; margin-left: 6px; font-weight: 500;">Part of this word</span>`
+            : '';
           popup.innerHTML = `
-            <div class="def-word">${escapeHtml(data.word)}</div>
+            <div class="def-word">${escapeHtml(data.word)}${badgeHtml}</div>
             ${data.part_of_speech ? `<div class="def-pos">${escapeHtml(data.part_of_speech)}</div>` : ''}
             <div class="def-meaning">${escapeHtml(data.definition)}</div>
             <div class="def-attribution">
-              ${escapeHtml(data.attribution)}
+              ${escapeHtml(data.attribution || '')}
               ${data.source_url ? `<br/><a href="${escapeHtml(data.source_url)}" target="_blank" rel="noopener">View source on Wiktionary &rarr;</a>` : ''}
             </div>
           `;

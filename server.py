@@ -40,7 +40,16 @@ SARVAM_STT_URL = (
     "&high_vad_sensitivity=true"
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 logger = logging.getLogger("akshara.live_reading")
 
 
@@ -90,6 +99,19 @@ async def define_word(word: str) -> JSONResponse:
     except Exception as error:
         logger.exception(f"Definition lookup failed for '{w}'")
         raise HTTPException(500, "Could not load word definition.")
+
+
+@app.post("/api/compare_reading")
+async def compare_reading(payload: dict[str, str]) -> JSONResponse:
+    expected = str(payload.get("expected", "")).strip()
+    spoken = str(payload.get("spoken", "")).strip()
+    try:
+        import backend.malayalam_sandhi
+        result = await asyncio.to_thread(backend.malayalam_sandhi.align_reading_sandhi, expected, spoken)
+        return JSONResponse(result)
+    except Exception as error:
+        logger.exception("Reading comparison failed.")
+        raise HTTPException(500, "Reading comparison failed.")
 
 
 def request_tts(text: str, key: str) -> str:

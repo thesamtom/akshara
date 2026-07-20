@@ -139,76 +139,108 @@ def cache_definition(
     except Exception as e:
         logger.error(f"Failed to save '{word}' to SQLite cache: {e}")
 
+def clean_html_text(raw_html: str) -> str:
+    """Strips HTML tags from Wiktionary definition strings."""
+    if not raw_html:
+        return ""
+    clean = re.sub(r'<[^>]+>', '', raw_html).strip()
+    return re.sub(r'\s+', ' ', clean)
+
 def fetch_from_api(word: str) -> dict:
-    """Queries the external Dictionary API and caches the result."""
+    """Queries Wiktionary REST API and FreeDictionaryAPI for Malayalam and English word meanings."""
     quoted_word = urllib.parse.quote(word)
-    url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{quoted_word}"
+    source_url = f"https://en.wiktionary.org/wiki/{quoted_word}"
+
+    # 1. Primary Lookup: Official Wiktionary REST API (Supports Malayalam & English)
+    wiktionary_url = f"https://en.wiktionary.org/api/rest_v1/page/definition/{quoted_word}"
     req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Akshara/1.0"}
+        wiktionary_url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AksharaApp/1.0"}
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=8) as response:
+        with urllib.request.urlopen(req, timeout=6) as response:
             payload = json.loads(response.read().decode('utf-8'))
 
-            # The API returns a JSON array of word entry objects
-            if not isinstance(payload, list) or not payload:
-                cache_definition(word=word, found=False)
-                return {"word": word, "found": False}
-
-            entry = payload[0]
-            source_urls = entry.get("sourceUrls", [])
-            source_url = source_urls[0] if source_urls else None
-
-            definition = None
-            part_of_speech = None
-
-            meanings = entry.get("meanings", [])
-            for meaning in meanings:
-                pos = meaning.get("partOfSpeech")
-                defs = meaning.get("definitions", [])
-                if defs:
-                    defn = defs[0].get("definition")
-                    if defn:
-                        definition = defn
-                        part_of_speech = pos
+            # Extract language entries (prefer 'ml' for Malayalam, then 'en', then any language entry)
+            ml_entries = payload.get("ml", []) or payload.get("en", [])
+            if not ml_entries and isinstance(payload, dict):
+                for lang_key, entries in payload.items():
+                    if entries and isinstance(entries, list):
+                        ml_entries = entries
                         break
 
-            if definition:
-                cache_definition(
-                    word=word,
-                    found=True,
-                    definition=definition,
-                    part_of_speech=part_of_speech,
-                    source_url=source_url
-                )
-                return {
-                    "word": word,
-                    "found": True,
-                    "definition": definition,
-                    "part_of_speech": part_of_speech,
-                    "source_url": source_url,
-                    "attribution": "Definitions via dictionaryapi.dev (Wiktionary)"
-                }
-            else:
-                cache_definition(word=word, found=False)
-                return {"word": word, "found": False}
+            if ml_entries:
+                entry = ml_entries[0]
+                pos = entry.get("partOfSpeech", "")
+                raw_defs = [clean_html_text(d.get("definition", "")) for d in entry.get("definitions", [])]
+                clean_defs = [d for d in raw_defs if d and len(d) > 1]
 
+                if clean_defs:
+                    definition = ", ".join(clean_defs[:2])
+                    cache_definition(
+                        word=word,
+                        found=True,
+                        definition=definition,
+                        part_of_speech=pos,
+                        source_url=source_url
+                    )
+                    return {
+                        "word": word,
+                        "found": True,
+                        "definition": definition,
+                        "part_of_speech": pos,
+                        "source_url": source_url,
+                        "attribution": "Definitions provided by Wiktionary"
+                    }
+    except HTTPError as e:
+        if e.code != 404:
+            logger.error(f"Wiktionary API HTTP error {e.code} for '{word}'")
+    except Exception as e:
+        logger.error(f"Wiktionary REST API lookup failed for '{word}': {e}")
+
+    # 2. Fallback Lookup: FreeDictionaryAPI Malayalam endpoint
+    freedict_url = f"https://freedictionaryapi.com/api/v1/entries/ml/{quoted_word}"
+    req_fallback = urllib.request.Request(
+        freedict_url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    )
+
+    try:
+        with urllib.request.urlopen(req_fallback, timeout=6) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+            entries = payload.get("entries", [])
+            for entry in entries:
+                senses = entry.get("senses", [])
+                for s in senses:
+                    defn = clean_html_text(s.get("definition", ""))
+                    if defn:
+                        pos = entry.get("partOfSpeech", "")
+                        alt_source = payload.get("source", {}).get("url") or source_url
+                        cache_definition(
+                            word=word,
+                            found=True,
+                            definition=defn,
+                            part_of_speech=pos,
+                            source_url=alt_source
+                        )
+                        return {
+                            "word": word,
+                            "found": True,
+                            "definition": defn,
+                            "part_of_speech": pos,
+                            "source_url": alt_source,
+                            "attribution": "Definitions provided by Wiktionary via FreeDictionaryAPI"
+                        }
     except HTTPError as e:
         if e.code == 404:
-            logger.info(f"Word '{word}' not found in Dictionary API (404).")
-            cache_definition(word=word, found=False)
-            return {"word": word, "found": False}
-        else:
-            logger.error(f"Dictionary API HTTP error {e.code} for '{word}'")
-            raise e
-    except URLError as e:
-        logger.error(f"Dictionary API network unreachable for '{word}': {e.reason}")
-        raise e
+            logger.info(f"Word '{word}' not found in dictionary APIs (404).")
     except Exception as e:
-        logger.error(f"Unexpected Dictionary API exception for '{word}': {e}")
-        raise e
+        logger.error(f"FreeDictionaryAPI fallback failed for '{word}': {e}")
+
+    # Not found in any API -> cache as not found
+    cache_definition(word=word, found=False)
+    return {"word": word, "found": False}
 
 def lookup_word(word: str) -> dict:
     """Public wrapper to look up a word with NFC normalization and caching."""

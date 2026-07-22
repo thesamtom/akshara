@@ -177,7 +177,7 @@ def fetch_from_api(word: str) -> dict:
 
     # 1. Primary Lookup: FreeDictionaryAPI (returns exact structured JSON schema with pronunciations, forms, senses)
     for lang_code in ["ml", "en"]:
-        freedict_url = f"https://freedictionaryapi.com/api/v1/entries/{lang_code}/{quoted_word}"
+        freedict_url = f"https://freedictionaryapi.com/api/v1/entries/{lang_code}/{quoted_word}?translations=true"
         req = urllib.request.Request(
             freedict_url,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AksharaApp/1.0"}
@@ -189,14 +189,25 @@ def fetch_from_api(word: str) -> dict:
                 if entries:
                     definition = ""
                     pos = entries[0].get("partOfSpeech", "")
+                    examples = []
+                    synonyms = []
+                    translations = []
+
                     for e in entries:
+                        if not pos and e.get("partOfSpeech"):
+                            pos = e.get("partOfSpeech")
                         for s in e.get("senses", []):
                             d = clean_html_text(s.get("definition", ""))
-                            if d:
+                            if d and not definition:
                                 definition = d
-                                if not pos: pos = e.get("partOfSpeech", "")
-                                break
-                        if definition: break
+                            if s.get("examples"):
+                                examples.extend([clean_html_text(ex) for ex in s["examples"] if ex])
+                            if s.get("synonyms"):
+                                synonyms.extend([clean_html_text(syn) for syn in s["synonyms"] if syn])
+                            if s.get("translations"):
+                                for tr in s["translations"]:
+                                    if isinstance(tr, dict) and tr.get("word"):
+                                        translations.append(tr["word"])
 
                     ipa = ""
                     rom = ""
@@ -223,10 +234,13 @@ def fetch_from_api(word: str) -> dict:
                         "part_of_speech": pos,
                         "ipa": ipa,
                         "romanization": rom,
+                        "examples": examples[:3],
+                        "synonyms": list(set(synonyms))[:5],
+                        "translations": list(set(translations))[:5],
                         "source_url": src_link,
                         "entries": entries,
                         "source": source_info,
-                        "attribution": "Definitions via FreeDictionaryAPI (Wiktionary)"
+                        "attribution": "Definitions via FreeDictionaryAPI.com"
                     }
                     cache_definition(
                         word=word,

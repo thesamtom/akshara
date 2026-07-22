@@ -326,33 +326,43 @@
       box-shadow: 0 2px 10px rgba(83, 74, 183, 0.18);
     }
     .word.correct {
-      background: var(--word-correct-bg);
-      color: var(--word-correct);
-      border-color: var(--word-correct-border);
+      background: #dcfce7 !important;
+      color: #15803d !important;
+      border: 1.5px solid #86efac !important;
+      font-weight: 600;
     }
     .word.mistake, .word.wrong {
-      background: var(--word-attention-bg);
-      color: var(--word-attention);
-      border-color: var(--word-attention-border);
+      background: #fee2e2 !important;
+      color: #b91c1c !important;
+      border: 1.5px solid #fca5a5 !important;
+      font-weight: 600;
     }
-    .word.missing {
-      background: rgba(245, 158, 11, 0.12);
-      color: #f59e0b;
-      border-color: rgba(245, 158, 11, 0.35);
-    }
-    body.light-theme .word.missing {
-      background: rgba(217, 119, 6, 0.1);
-      color: #d97706;
-      border-color: rgba(217, 119, 6, 0.3);
+    .word.missing, .word.pending {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      opacity: 0.85;
     }
     .word.current {
-      border: 1.5px dashed var(--focus-highlight);
-      box-shadow: 0 0 8px rgba(83, 74, 183, 0.12);
-      animation: pulse-current 1.5s infinite alternate;
+      background: #fef08a !important;
+      color: #713f12 !important;
+      border: 2px solid #eab308 !important;
+      box-shadow: 0 0 14px rgba(234, 179, 8, 0.45);
+      font-weight: 700;
+      transform: scale(1.06);
+      animation: pulse-yellow 1.4s infinite alternate ease-in-out;
+      z-index: 2;
+      position: relative;
     }
-    @keyframes pulse-current {
-      from { transform: scale(1); }
-      to { transform: scale(1.03); }
+    body.light-theme .word.current {
+      background: #fef08a !important;
+      color: #713f12 !important;
+      border: 2px solid #ca8a04 !important;
+      box-shadow: 0 0 12px rgba(202, 138, 4, 0.4);
+    }
+    @keyframes pulse-yellow {
+      from { transform: scale(1.02); box-shadow: 0 0 10px rgba(234, 179, 8, 0.3); }
+      to { transform: scale(1.08); box-shadow: 0 0 18px rgba(234, 179, 8, 0.6); }
     }
     .section-label {
       font-size: 0.8rem;
@@ -583,14 +593,333 @@
       color: var(--text-muted);
       padding: 8px 0;
     }
-    #definition-popup .def-spinner {
+
+    /* Monkeytype Reading Container Styles */
+    .monkeytype-container {
+      margin-top: 24px;
+      padding: 28px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      line-height: 2.4;
+      font-size: 1.35rem;
+      letter-spacing: 0.3px;
+      word-spacing: 2px;
+      font-family: 'Outfit', sans-serif;
+    }
+    body.light-theme .monkeytype-container {
+      background: rgba(44, 44, 42, 0.02);
+    }
+    .monkeytype-words {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .monkeytype-word {
       display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid var(--card-border);
-      border-top-color: var(--focus-highlight);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      user-select: none;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+    .monkeytype-word.pending {
+      color: var(--text-muted);
+      opacity: 0.55;
+    }
+    .monkeytype-word.current {
+      background: rgba(254, 240, 138, 0.2) !important;
+      color: var(--text-main) !important;
+      border-bottom: 3px solid #eab308;
+      font-weight: 600;
+      transform: scale(1.04);
+      animation: cursor-flash 1s infinite alternate;
+      z-index: 2;
+      position: relative;
+    }
+    body.light-theme .monkeytype-word.current {
+      background: rgba(202, 138, 4, 0.15) !important;
+      border-bottom: 3px solid #ca8a04;
+    }
+    @keyframes cursor-flash {
+      from { opacity: 0.85; }
+      to { opacity: 1; }
+    }
+    .monkeytype-word.correct {
+      color: #22c55e !important;
+      font-weight: 500;
+    }
+    .monkeytype-word.partial {
+      color: #f97316 !important;
+      font-weight: 500;
+      text-decoration: underline dotted #fb923c;
+    }
+    .monkeytype-word.wrong {
+      color: #ef4444 !important;
+      font-weight: 500;
+      text-decoration: underline wavy #f87171;
+    }
+
+    /* Result Continuous Sentence Paragraph Visualization */
+    .reading-result-paragraph {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 1.3rem;
+      line-height: 1.8;
+      margin-bottom: 28px;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      text-align: left;
+    }
+    body.light-theme .reading-result-paragraph {
+      background: rgba(255, 255, 255, 0.85);
+    }
+    .result-word {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: transform 0.15s ease;
+    }
+    .result-word:hover {
+      transform: scale(1.04);
+    }
+    .result-word.correct {
+      color: #16a34a !important;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .result-word.partial {
+      color: #ea580c !important;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+    .result-word.wrong {
+      color: #dc2626 !important;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Summary Styles */
+    .monkeytype-summary {
+      margin-top: 24px;
+      padding: 32px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .monkeytype-summary h3 {
+      margin: 0 0 24px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .summary-card {
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    body.light-theme .summary-card {
+      background: rgba(44, 44, 42, 0.02);
+    }
+    .summary-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--focus-highlight);
+    }
+    .summary-card .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    .difficult-section {
+      text-align: left;
+      margin-bottom: 28px;
+      padding: 16px;
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px dashed rgba(239, 68, 68, 0.25);
+      border-radius: 12px;
+    }
+    .difficult-section .section-title {
+      margin: 0 0 12px;
+      font-weight: 600;
+      color: #ef4444;
+    }
+    .difficult-words-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .difficult-word-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    body.light-theme .difficult-word-badge {
+      color: #b91c1c;
+      background: rgba(185, 28, 28, 0.08);
+      border-color: rgba(185, 28, 28, 0.2);
+    }
+    .summary-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .practice-btn {
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+    }
+    .practice-btn:hover {
+      background: #dc2626 !important;
+    }
+    .restart-btn {
+      background: var(--primary-cta) !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 15px rgba(15, 110, 86, 0.25);
+    }
+    .restart-btn:hover {
+      background: var(--primary-cta-hover) !important;
+    }
+
+    /* Floating Word Definition Bubble */
+    .definition-bubble {
+      position: absolute;
+      z-index: 1000;
+      width: 320px;
+      max-width: 90vw;
+      background: var(--card-bg, #1e1e24);
+      border: 1px solid var(--card-border, rgba(255,255,255,0.15));
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      padding: 16px;
+      backdrop-filter: blur(12px);
+      transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    body.light-theme .definition-bubble {
+      background: #ffffff;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+      border-color: rgba(0, 0, 0, 0.12);
+    }
+    .definition-bubble.hidden {
+      opacity: 0;
+      transform: translateY(6px) scale(0.96);
+      pointer-events: none;
+    }
+    .bubble-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+    }
+    body.light-theme .bubble-header {
+      border-bottom-color: rgba(0, 0, 0, 0.08);
+    }
+    .bubble-title-group {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .bubble-word {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--focus-highlight, #facc15);
+    }
+    body.light-theme .bubble-word {
+      color: #ca8a04;
+    }
+    .bubble-pos {
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-style: italic;
+      text-transform: lowercase;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      color: var(--text-muted, #9ca3af);
+    }
+    .bubble-ipa {
+      font-size: 0.8rem;
+      font-family: monospace;
+      color: var(--text-muted, #9ca3af);
+    }
+    .bubble-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--text-muted, #9ca3af);
+      cursor: pointer;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+    .bubble-close:hover {
+      color: #ef4444;
+    }
+    .bubble-content {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text-main, #f3f4f6);
+      margin-bottom: 10px;
+    }
+    .bubble-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted, #9ca3af);
+      margin-bottom: 10px;
+    }
+    .bubble-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted, #9ca3af);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 8px;
+    }
+    body.light-theme .bubble-footer {
+      border-top-color: rgba(0, 0, 0, 0.08);
+    }
+    .bubble-footer a {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+    .bubble-footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -644,7 +973,22 @@
   </div>
 
 
-  <div id="definition-popup" role="dialog" aria-label="Word Definition"></div>
+  <div id="definition-bubble" class="definition-bubble hidden" role="dialog" aria-label="Word Definition">
+    <div class="bubble-header">
+      <div class="bubble-title-group">
+        <span id="bubble-word" class="bubble-word"></span>
+        <span id="bubble-pos" class="bubble-pos"></span>
+        <span id="bubble-ipa" class="bubble-ipa"></span>
+      </div>
+      <button type="button" id="bubble-close" class="bubble-close" aria-label="Close definition">&times;</button>
+    </div>
+    <div id="bubble-content" class="bubble-content"></div>
+    <div id="bubble-meta" class="bubble-meta hidden"></div>
+    <div class="bubble-footer">
+      <span id="bubble-attribution">Definitions via FreeDictionaryAPI.com</span>
+      <a id="bubble-link" target="_blank" rel="noopener">Source &rarr;</a>
+    </div>
+  </div>
 
   <script src="/static/tesseract/tesseract.min.js"></script>
   <script>
@@ -676,6 +1020,350 @@
     let autoStopTimer = null;
     const AUTO_STOP_DELAY = 4500; // 4.5 seconds of silence to auto-stop
 
+    // Monkeytype Reading Tracker State Variables
+    let isMonkeytypeActive = false;
+    let monkeytypeWords = [];
+    let monkeytypeStatus = [];
+    let monkeytypeCurrentIndex = 0;
+    let monkeytypeStartTime = null;
+    let monkeytypeProcessedCount = 0;
+    let monkeytypeDifficultWords = [];
+    let monkeytypeDebounceTimer = null;
+
+    function getSimilarity(s1, s2) {
+      const clean = str => {
+        let normalized = str.trim()
+          .normalize('NFC')
+          .replace(/\u0D28\u0D4D\u200D/g, '\u0D7B') // ൻ
+          .replace(/\u0D30\u0D4D\u200D/g, '\u0D7C') // ർ
+          .replace(/\u0D32\u0D4D\u200D/g, '\u0D7D') // ൽ
+          .replace(/\u0D33\u0D4D\u200D/g, '\u0D7E') // ൾ
+          .replace(/\u0D23\u0D4D\u200D/g, '\u0D7F') // ൺ
+          .replace(/[\u200B-\u200D\uFEFF]/g, '')
+          .replace(/[^\p{L}\p{M}\p{N}]/gu, '');
+          
+        normalized = normalized
+          .replace(/ൻ/g, 'ന')
+          .replace(/ർ/g, 'ര')
+          .replace(/ൽ/g, 'ല')
+          .replace(/ൾ/g, 'ള')
+          .replace(/ൺ/g, 'ണ')
+          .replace(/[്ു]+$/, '');
+        return normalized;
+      };
+      
+      s1 = clean(s1);
+      s2 = clean(s2);
+      
+      if (s1 === s2) return 1.0;
+      const len1 = s1.length;
+      const len2 = s2.length;
+      if (!len1 || !len2) return 0.0;
+      
+      const dp = Array.from({ length: len1 + 1 }, () => Array(len2 + 1).fill(0));
+      for (let i = 0; i <= len1; i++) dp[i][0] = i;
+      for (let j = 0; j <= len2; j++) dp[0][j] = j;
+      
+      for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+          if (s1[i - 1] === s2[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1];
+          } else {
+            dp[i][j] = 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+          }
+        }
+      }
+      const distance = dp[len1][len2];
+      return 1.0 - (distance / Math.max(len1, len2));
+    }
+
+    function initMonkeytype(paragraphText) {
+      const words = normalizedWords(paragraphText);
+      monkeytypeWords = words;
+      monkeytypeStatus = Array(words.length).fill('pending');
+      monkeytypeCurrentIndex = 0;
+      monkeytypeProcessedCount = 0;
+      monkeytypeDifficultWords = [];
+      monkeytypeStartTime = Date.now();
+      isMonkeytypeActive = true;
+    }
+
+    function renderMonkeytype() {
+      comparison.innerHTML = '';
+      
+      const container = document.createElement('div');
+      container.className = 'monkeytype-container';
+      
+      const wordsDiv = document.createElement('div');
+      wordsDiv.className = 'monkeytype-words';
+      
+      monkeytypeWords.forEach((word, index) => {
+        const span = document.createElement('span');
+        let state = monkeytypeStatus[index];
+        if (index === monkeytypeCurrentIndex) {
+          state = 'current';
+          span.title = 'Focus word: read this now';
+        } else if (state === 'pending') {
+          span.title = 'Pending word';
+        } else if (state === 'correct') {
+          span.title = 'Pronounced correctly';
+        } else if (state === 'wrong') {
+          span.title = 'Pronounced incorrectly';
+        }
+        
+        span.className = `monkeytype-word ${state}`;
+        span.textContent = word;
+        wordsDiv.appendChild(span);
+      });
+      
+      container.appendChild(wordsDiv);
+      comparison.appendChild(container);
+    }
+
+    function alignReadingDP(expectedWords, spokenWords, similarityThreshold = 0.70) {
+      const m = expectedWords.length;
+      const n = spokenWords.length;
+      
+      if (m === 0) return [];
+      if (n === 0) return Array(m).fill('pending');
+      
+      const getMatchCost = (w1, w2) => {
+        const sim = getSimilarity(w1, w2);
+        if (sim >= 0.70) return 1.0 - sim;
+        if (sim >= 0.45 || w1.includes(w2) || w2.includes(w1)) return 1.2 - sim;
+        return 1.5;
+      };
+      
+      const createSandhiVariants = (w1, w2) => {
+        const w1Clean = w1.trim();
+        const w2Clean = w2.trim();
+        const variants = [
+          w1Clean + w2Clean,
+          w1Clean + ' ' + w2Clean
+        ];
+        if (w1Clean.endsWith('ത്ത്') && w2Clean.startsWith('ഉ')) {
+          variants.push(w1Clean.slice(0, -2) + 'ത്തു' + w2Clean.slice(1));
+        } else if (w1Clean.endsWith('്') && w2Clean.startsWith('ഉ')) {
+          variants.push(w1Clean.slice(0, -1) + 'ു' + w2Clean.slice(1));
+        } else if (w1Clean.endsWith('്') && w2Clean.startsWith('ആ')) {
+          variants.push(w1Clean.slice(0, -1) + 'ാ' + w2Clean.slice(1));
+        } else if (w1Clean.endsWith('്') && w2Clean.startsWith('ഇ')) {
+          variants.push(w1Clean.slice(0, -1) + 'ി' + w2Clean.slice(1));
+        } else if (w1Clean.endsWith('ം') && w2Clean.startsWith('ഉ')) {
+          variants.push(w1Clean.slice(0, -1) + 'മു' + w2Clean.slice(1));
+        }
+        return variants;
+      };
+      
+      const getSandhiSimilarity = (w1, w2, target) => {
+        const vars = createSandhiVariants(w1, w2);
+        let maxSim = 0;
+        vars.forEach(v => {
+          const sim = getSimilarity(v, target);
+          if (sim > maxSim) maxSim = sim;
+        });
+        return maxSim;
+      };
+      
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(Infinity));
+      dp[0][0] = 0.0;
+      
+      for (let i = 1; i <= m; i++) dp[i][0] = dp[i-1][0] + 1.0;
+      for (let j = 1; j <= n; j++) dp[0][j] = dp[0][j-1] + 1.0;
+      
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const costDel = dp[i-1][j] + 1.0;
+          const costIns = dp[i][j-1] + 1.0;
+          const costMatch = dp[i-1][j-1] + getMatchCost(expectedWords[i-1], spokenWords[j-1]);
+          
+          let costMatch2to1 = Infinity;
+          if (i >= 2) {
+            const sim = getSandhiSimilarity(expectedWords[i-2], expectedWords[i-1], spokenWords[j-1]);
+            if (sim >= similarityThreshold) costMatch2to1 = dp[i-2][j-1] + (1.0 - sim);
+          }
+          
+          let costMatch1to2 = Infinity;
+          if (j >= 2) {
+            const sim = getSandhiSimilarity(spokenWords[j-2], spokenWords[j-1], expectedWords[i-1]);
+            if (sim >= similarityThreshold) costMatch1to2 = dp[i-1][j-2] + (1.0 - sim);
+          }
+          
+          dp[i][j] = Math.min(costDel, costIns, costMatch, costMatch2to1, costMatch1to2);
+        }
+      }
+      
+      const expectedStatus = Array(m).fill('pending');
+      let i = m, j = n;
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0) {
+          const cost = getMatchCost(expectedWords[i-1], spokenWords[j-1]);
+          if (Math.abs(dp[i][j] - (dp[i-1][j-1] + cost)) < 1e-5) {
+            const sim = getSimilarity(expectedWords[i-1], spokenWords[j-1]);
+            let status = 'wrong';
+            if (sim >= 0.70) {
+              status = 'correct';
+            } else if (sim >= 0.45 || expectedWords[i-1].includes(spokenWords[j-1]) || spokenWords[j-1].includes(expectedWords[i-1])) {
+              status = 'partial';
+            }
+            expectedStatus[i-1] = status;
+            i--; j--;
+            continue;
+          }
+        }
+        if (i >= 2 && j > 0) {
+          const sim = getSandhiSimilarity(expectedWords[i-2], expectedWords[i-1], spokenWords[j-1]);
+          if (sim >= similarityThreshold && Math.abs(dp[i][j] - (dp[i-2][j-1] + (1.0 - sim))) < 1e-5) {
+            expectedStatus[i-1] = 'correct';
+            expectedStatus[i-2] = 'correct';
+            i -= 2; j--;
+            continue;
+          }
+        }
+        if (i > 0 && j >= 2) {
+          const sim = getSandhiSimilarity(spokenWords[j-2], spokenWords[j-1], expectedWords[i-1]);
+          if (sim >= similarityThreshold && Math.abs(dp[i][j] - (dp[i-1][j-2] + (1.0 - sim))) < 1e-5) {
+            expectedStatus[i-1] = 'correct';
+            i--; j -= 2;
+            continue;
+          }
+        }
+        if (i > 0 && Math.abs(dp[i][j] - (dp[i-1][j] + 1.0)) < 1e-5) {
+          expectedStatus[i-1] = 'pending';
+          i--;
+          continue;
+        }
+        if (j > 0 && Math.abs(dp[i][j] - (dp[i][j-1] + 1.0)) < 1e-5) {
+          j--;
+          continue;
+        }
+        if (i > 0 && j > 0) {
+          i--; j--;
+        } else if (i > 0) {
+          i--;
+        } else if (j > 0) {
+          j--;
+        }
+      }
+      
+      return expectedStatus;
+    }
+
+    function showMonkeytypeSummary() {
+      const total = monkeytypeWords.length;
+      const correctCount = monkeytypeStatus.filter(s => s === 'correct').length;
+      const partialCount = monkeytypeStatus.filter(s => s === 'partial').length;
+      const wrongCount = total - (correctCount + partialCount);
+      
+      const weightedScore = correctCount + (0.5 * partialCount);
+      const accuracy = total > 0 ? Math.round((weightedScore / total) * 100) : 0;
+      
+      const durationSeconds = Math.round((Date.now() - monkeytypeStartTime) / 1000);
+      const durationFormatted = durationSeconds >= 60 
+        ? `${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s`
+        : `${durationSeconds}s`;
+      
+      // Collect all words needing practice (Orange or Red)
+      const difficultList = [];
+      monkeytypeWords.forEach((word, idx) => {
+        const st = monkeytypeStatus[idx];
+        if (st === 'partial' || st === 'wrong' || st === 'pending') {
+          if (!difficultList.includes(word)) {
+            difficultList.push(word);
+          }
+        }
+      });
+      
+      comparison.innerHTML = '';
+      
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'monkeytype-summary';
+      
+      // 1. Continuous Paragraph Color-Coded Visualization
+      const paragraphHTML = monkeytypeWords.map((word, idx) => {
+        const status = monkeytypeStatus[idx];
+        let icon = '🟢';
+        let className = 'correct';
+        if (status === 'partial') {
+          icon = '🟠';
+          className = 'partial';
+        } else if (status === 'wrong' || status === 'pending') {
+          icon = '🔴';
+          className = 'wrong';
+        }
+        return `<span class="result-word ${className}">${icon} ${word}</span>`;
+      }).join(' ');
+
+      summaryDiv.innerHTML = `
+        <h3>Reading Session Result</h3>
+        
+        <div class="reading-result-paragraph">
+          ${paragraphHTML}
+        </div>
+        
+        <div class="summary-grid">
+          <div class="summary-card">
+            <span class="value">${accuracy}%</span>
+            <span class="label">Reading Accuracy</span>
+          </div>
+          <div class="summary-card">
+            <span class="value" style="color: #22c55e;">${correctCount}</span>
+            <span class="label">🟢 Correct</span>
+          </div>
+          <div class="summary-card">
+            <span class="value" style="color: #f97316;">${partialCount}</span>
+            <span class="label">🟠 Partial</span>
+          </div>
+          <div class="summary-card">
+            <span class="value" style="color: #ef4444;">${wrongCount}</span>
+            <span class="label">🔴 Incorrect</span>
+          </div>
+          <div class="summary-card">
+            <span class="value">${durationFormatted}</span>
+            <span class="label">Reading Duration</span>
+          </div>
+        </div>
+        
+        ${difficultList.length > 0 ? `
+          <div class="difficult-section">
+            <p class="section-title">Difficult Words to Practice:</p>
+            <div class="difficult-words-list">
+              ${difficultList.map(w => `<span class="difficult-word-badge">${w}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        <div class="summary-actions">
+          ${difficultList.length > 0 ? `
+            <button type="button" id="practice-difficult-btn" class="practice-btn">Practice Difficult Words</button>
+          ` : ''}
+          <button type="button" id="restart-reading-btn" class="restart-btn">Restart Reading</button>
+        </div>
+      `;
+      
+      comparison.appendChild(summaryDiv);
+      
+      // Wire up buttons
+      const practiceBtn = document.getElementById('practice-difficult-btn');
+      if (practiceBtn) {
+        practiceBtn.addEventListener('click', () => {
+          output.value = difficultList.join(' ');
+          initMonkeytype(output.value);
+          renderMonkeytype();
+          startLiveReading();
+        });
+      }
+      
+      const restartBtn = document.getElementById('restart-reading-btn');
+      if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+          initMonkeytype(output.value);
+          renderMonkeytype();
+          startLiveReading();
+        });
+      }
+    }
+
     function selectFile(file) {
       if (!file || !file.type.startsWith('image/')) {
         status.textContent = 'Please choose a valid image file.';
@@ -701,36 +1389,141 @@
     }));
     uploadArea.addEventListener('drop', event => selectFile(event.dataTransfer.files[0]));
 
+    async function processImageLocalTesseract(file) {
+      status.innerHTML = '<span class="spinner"></span><span style="background: rgba(234, 179, 8, 0.2); color: #eab308; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">Offline Mode</span>Loading local OCR core…';
+      const worker = await Tesseract.createWorker('mal', 1, {
+        workerPath: '/static/tesseract/worker.min.js',
+        corePath: '/static/tesseract/',
+        langPath: '/static/tesseract/tessdata/',
+        logger: message => {
+          if (message.status === 'loading language traineddata') {
+            status.innerHTML = '<span class="spinner"></span>Loading Malayalam model (~12MB)…';
+          } else if (message.status === 'recognizing text') {
+            status.innerHTML = `<span class="spinner"></span>Offline Converting… ${Math.round(message.progress * 100)}%`;
+          } else {
+            status.innerHTML = `<span class="spinner"></span>Preparing: ${message.status}…`;
+          }
+        }
+      });
+
+      const result = await worker.recognize(file);
+      await worker.terminate();
+      return result.data.text.trim();
+    }
+
+    function compressImageForUpload(file, maxDimension = 1600, quality = 0.85) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', quality);
+        };
+        img.onerror = () => resolve(file);
+        img.src = url;
+      });
+    }
+
     convertButton.addEventListener('click', async () => {
       if (!imageFile) return;
       convertButton.disabled = true;
       output.value = '';
-      status.innerHTML = '<span class="spinner"></span>Loading local OCR core…';
-      try {
-        const worker = await Tesseract.createWorker('mal', 1, {
-          workerPath: '/static/tesseract/worker.min.js',
-          corePath: '/static/tesseract/',
-          langPath: '/static/tesseract/tessdata/',
-          logger: message => {
-            if (message.status === 'loading language traineddata') {
-              status.innerHTML = '<span class="spinner"></span>Loading Malayalam model (~12MB, cached on first run)…';
-            } else if (message.status === 'recognizing text') {
-              status.innerHTML = `<span class="spinner"></span>Converting… ${Math.round(message.progress * 100)}%`;
-            } else {
-              status.innerHTML = `<span class="spinner"></span>Preparing: ${message.status}…`;
+
+      if (navigator.onLine) {
+        status.innerHTML = '<span class="spinner"></span>Transcribing with Gemini OCR…';
+        try {
+          const uploadBlob = await compressImageForUpload(imageFile);
+          const formData = new FormData();
+          formData.append('file', uploadBlob, imageFile.name);
+
+          const response = await fetch('/api/ocr', {
+            method: 'POST',
+            headers: { 'ngrok-skip-browser-warning': 'true' },
+            body: formData
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Cloud OCR request failed.');
+          }
+
+          const data = await response.json();
+          let rawText = (data.raw_text || '').trim();
+
+          if (navigator.onLine) {
+            try {
+              const cleanResponse = await fetch('/api/clean', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: rawText })
+              });
+              if (cleanResponse.ok) {
+                const cleanData = await cleanResponse.json();
+                if (cleanData.cleaned_text) {
+                  rawText = cleanData.cleaned_text.trim();
+                }
+              }
+            } catch (e) {
+              console.warn('OpenAI cleanup failed:', e);
             }
           }
-        });
 
-        const result = await worker.recognize(imageFile);
-        await worker.terminate();
+          output.value = rawText;
+          const isOnline = navigator.onLine;
+          playButton.disabled = !output.value || !isOnline;
+          readingButton.disabled = !output.value || !isOnline;
+          renderComparison(output.value, '');
+          status.textContent = 'Conversion complete (Gemini OCR).';
+          return;
+        } catch (error) {
+          console.warn('Gemini OCR API failed, falling back to local offline OCR:', error);
+        }
+      }
 
-        output.value = result.data.text.trim();
+      // Offline or network fallback path
+      try {
+        let text = await processImageLocalTesseract(imageFile);
+
+        if (navigator.onLine) {
+          try {
+            const cleanResponse = await fetch('/api/clean', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: text })
+            });
+            if (cleanResponse.ok) {
+              const cleanData = await cleanResponse.json();
+              if (cleanData.cleaned_text) {
+                text = cleanData.cleaned_text.trim();
+              }
+            }
+          } catch (e) {
+            console.warn('OpenAI cleanup failed:', e);
+          }
+        }
+
+        output.value = text;
         const isOnline = navigator.onLine;
         playButton.disabled = !output.value || !isOnline;
         readingButton.disabled = !output.value || !isOnline;
         renderComparison(output.value, '');
-        status.textContent = 'Conversion complete.';
+        status.textContent = 'Conversion complete (Offline Local OCR).';
       } catch (error) {
         console.error(error);
         status.textContent = 'Conversion failed. Please try another image.';
@@ -739,63 +1532,13 @@
       }
     });
 
+    // Real-time output text change listener
     output.addEventListener('input', () => {
       const hasText = Boolean(output.value.trim());
       const isOnline = navigator.onLine;
       playButton.disabled = !hasText || !isOnline;
       readingButton.disabled = !hasText || !isOnline;
       renderComparison(output.value, liveTranscript);
-    });
-
-    // Definition hover: show on mouseenter, hide on mouseleave (with small delay)
-    let hoverTimer = null;
-    let hideTimer = null;
-
-    comparison.addEventListener('mouseenter', (event) => {
-      const wordSpan = event.target.closest('.word');
-      if (!wordSpan) return;
-      clearTimeout(hideTimer);
-      clearTimeout(hoverTimer);
-      hoverTimer = setTimeout(() => {
-        showWordDefinition(wordSpan.textContent.trim(), wordSpan);
-      }, 300); // small delay so fast mouse movements don't spam API
-    }, true);
-
-    comparison.addEventListener('mouseleave', (event) => {
-      const wordSpan = event.target.closest('.word');
-      if (!wordSpan) return;
-      clearTimeout(hoverTimer);
-      const popup = document.getElementById('definition-popup');
-      hideTimer = setTimeout(() => {
-        if (!popup.matches(':hover')) {
-          popup.classList.remove('show', 'popup-below');
-        }
-      }, 200);
-    }, true);
-
-    // Keep popup open while hovering over it
-    const defPopup = document.getElementById('definition-popup');
-    if (defPopup) {
-      defPopup.addEventListener('mouseenter', () => {
-        clearTimeout(hideTimer);
-      });
-      defPopup.addEventListener('mouseleave', () => {
-        hideTimer = setTimeout(() => defPopup.classList.remove('show', 'popup-below'), 150);
-      });
-    }
-
-    // Click: play pronunciation (tap on mobile also triggers this)
-    comparison.addEventListener('click', (event) => {
-      const wordSpan = event.target.closest('.word');
-      if (!wordSpan) return;
-      event.stopPropagation();
-      const word = wordSpan.textContent.trim();
-      if (!word) return;
-      playWordPronunciation(word);
-      // On touch/mobile, also show definition on tap since hover doesn't exist
-      if (!window.matchMedia('(hover: hover)').matches) {
-        showWordDefinition(word, wordSpan);
-      }
     });
 
     playButton.addEventListener('click', async () => {
@@ -845,14 +1588,16 @@
     });
 
     function normalizedWords(text) {
-      // \p{M} preserves Malayalam vowel signs, virama, etc. Strip zero-width joiners and non-letter symbols
-      return text
-        .normalize('NFC')
+      if (!text) return [];
+      let cleaned = text.normalize('NFC')
+        .replace(/\u0D28\u0D4D\u200D/g, '\u0D7B') // ൻ
+        .replace(/\u0D30\u0D4D\u200D/g, '\u0D7C') // ർ
+        .replace(/\u0D32\u0D4D\u200D/g, '\u0D7D') // ൽ
+        .replace(/\u0D33\u0D4D\u200D/g, '\u0D7E') // ൾ
+        .replace(/\u0D23\u0D4D\u200D/g, '\u0D7F') // ൺ
         .replace(/[\u200B-\u200D\uFEFF]/g, '')
-        .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
+        .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ');
+      return cleaned.trim().split(/\s+/).filter(Boolean);
     }
     async function renderComparison(expectedText, spokenText) {
       const expected = normalizedWords(expectedText);
@@ -964,28 +1709,37 @@
       // 2. Expected Text Container
       const targetLabel = document.createElement('div');
       targetLabel.className = 'section-label';
-      targetLabel.textContent = 'Book Text:';
+      targetLabel.textContent = 'Reading Guide (Yellow = Focus Word, Green = Correct, Red = Needs Review):';
       comparison.append(targetLabel);
 
       const expectedContainer = document.createElement('div');
       expectedContainer.className = 'expected-words-container';
 
+      // Pointer focus is the first unattempted word
       let currentWordIndex = expectedStatus.findIndex(s => s === 'missing');
+      if (currentWordIndex === -1 && liveSocket) {
+        currentWordIndex = expectedStatus.length - 1;
+      }
 
       expected.forEach((word, index) => {
         const span = document.createElement('span');
         const statusClass = expectedStatus[index]; // 'correct', 'wrong', 'missing'
         let stateClass = ` ${statusClass}`;
+        
         if (index === currentWordIndex && liveSocket) {
-          stateClass += ' current';
+          stateClass = ' current';
+          span.title = 'Focus word: read this word next';
+        } else if (statusClass === 'missing') {
+          stateClass = ' pending';
+          span.title = 'Pending word';
+        } else if (statusClass === 'correct') {
+          span.title = 'Pronounced correctly';
+        } else if (statusClass === 'wrong') {
+          span.title = 'Pronounced incorrectly';
         }
+        
         span.className = `word${stateClass}`;
         span.textContent = word;
-        if (statusClass === 'missing') {
-          span.title = 'Missing word (not read yet)';
-        } else if (statusClass === 'wrong') {
-          span.title = 'Said wrong';
-        }
         expectedContainer.append(span);
       });
       comparison.append(expectedContainer);
@@ -1024,8 +1778,13 @@
         bytes[index * 2] = value & 0xff;
         bytes[index * 2 + 1] = (value >> 8) & 0xff;
       }
+      
       let binary = '';
-      for (const byte of bytes) binary += String.fromCharCode(byte);
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
       return btoa(binary);
     }
 
@@ -1034,26 +1793,40 @@
         clearTimeout(autoStopTimer);
         autoStopTimer = null;
       }
+      if (monkeytypeDebounceTimer) {
+        clearTimeout(monkeytypeDebounceTimer);
+        monkeytypeDebounceTimer = null;
+      }
       if (audioProcessor) {
-        audioProcessor.disconnect();
+        try { audioProcessor.disconnect(); } catch (e) {}
         audioProcessor = null;
       }
       if (audioSource) {
-        audioSource.disconnect();
+        try { audioSource.disconnect(); } catch (e) {}
         audioSource = null;
       }
       if (audioContext) {
-        if (audioContext.state !== 'closed') {
-          audioContext.close();
-        }
+        try {
+          if (audioContext.state !== 'closed') audioContext.close();
+        } catch (e) {}
         audioContext = null;
       }
       if (microphoneStream) {
-        microphoneStream.getTracks().forEach(track => track.stop());
+        try { microphoneStream.getTracks().forEach(track => track.stop()); } catch (e) {}
         microphoneStream = null;
+      }
+      if (liveSocket) {
+        const socketToClose = liveSocket;
+        liveSocket = null;
+        try { if (socketToClose.readyState === WebSocket.OPEN) socketToClose.close(); } catch (e) {}
       }
       if (captionsOverlay) captionsOverlay.classList.add('hidden');
       if (captionsText) captionsText.textContent = '';
+      if (readingButton) {
+        readingButton.disabled = false;
+        readingButton.textContent = 'Start Reading';
+        readingButton.classList.remove('active-reading');
+      }
     }
 
     function mergeTranscripts(oldText, newText) {
@@ -1062,77 +1835,77 @@
       if (!oldClean) return newClean;
       if (!newClean) return oldClean;
 
-      const cleanWord = w => w.normalize('NFC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
-
       const oldWords = oldClean.split(/\s+/);
       const newWords = newClean.split(/\s+/);
 
-      const oldWordsClean = oldWords.map(cleanWord);
-      const newWordsClean = newWords.map(cleanWord);
+      if (newClean.startsWith(oldClean)) {
+        return newClean;
+      }
 
-      let commonPrefixLength = 0;
-      const minLength = Math.min(oldWords.length, newWords.length);
-      for (let i = 0; i < minLength; i++) {
-        if (oldWordsClean[i] === newWordsClean[i]) {
-          commonPrefixLength = i + 1;
-        } else {
-          break;
+      let bestOverlap = 0;
+      const maxOverlap = Math.min(oldWords.length, newWords.length);
+
+      for (let size = 1; size <= maxOverlap; size++) {
+        const suffix = oldWords.slice(oldWords.length - size);
+        const prefix = newWords.slice(0, size);
+        
+        let match = true;
+        for (let k = 0; k < size; k++) {
+          if (getSimilarity(suffix[k], prefix[k]) < 0.7) {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          bestOverlap = size;
         }
       }
 
-      if (commonPrefixLength > 0) {
-        const prefix = oldWords.slice(0, commonPrefixLength);
-        const suffix = newWords.slice(commonPrefixLength);
-        return prefix.concat(suffix).join(' ');
+      if (bestOverlap > 0) {
+        return oldWords.slice(0, oldWords.length - bestOverlap).concat(newWords).join(' ');
       }
 
-      let overlapSize = 0;
-      const limit = Math.min(oldWords.length, newWords.length);
-      for (let size = 1; size <= limit; size++) {
-        const suffix = oldWordsClean.slice(oldWordsClean.length - size);
-        const prefix = newWordsClean.slice(0, size);
-        if (suffix.join(' ') === prefix.join(' ')) {
-          overlapSize = size;
+      if (oldWords.length > 0 && newWords.length === 1) {
+        const lastWord = oldWords[oldWords.length - 1];
+        if (getSimilarity(lastWord, newWords[0]) > 0.4) {
+          return oldWords.slice(0, oldWords.length - 1).concat(newWords).join(' ');
         }
       }
 
-      if (overlapSize > 0) {
-        return oldWords.concat(newWords.slice(overlapSize)).join(' ');
+      if (oldWords.length <= newWords.length && getSimilarity(oldClean, newClean) > 0.5) {
+        return newClean;
       }
 
       return oldWords.concat(newWords).join(' ');
     }
 
     function resetAutoStopTimer() {
+      // Manual stop only: do not auto-stop on silence
       if (autoStopTimer) {
         clearTimeout(autoStopTimer);
+        autoStopTimer = null;
       }
-      autoStopTimer = setTimeout(() => {
-        status.textContent = 'Auto-stopped reading due to silence.';
-        stopLiveReading();
-      }, AUTO_STOP_DELAY);
     }
 
     function stopLiveReading() {
       stopRequested = true;
-      readingButton.disabled = true;
-      readingButton.textContent = 'Finishing...';
-      readingButton.classList.remove('active-reading');
-      cleanupAudio();
-      if (liveSocket && liveSocket.readyState === WebSocket.OPEN) {
-        liveSocket.send(JSON.stringify({ type: 'flush' }));
-        setTimeout(() => {
-          if (liveSocket) {
-            liveSocket.close();
-          }
-        }, 2000);
-      } else {
-        readingButton.disabled = false;
-        readingButton.textContent = 'Start Reading';
+      if (readingButton) {
+        readingButton.disabled = true;
+        readingButton.textContent = 'Finishing...';
+        readingButton.classList.remove('active-reading');
       }
+
+      if (isMonkeytypeActive) {
+        showMonkeytypeSummary();
+        isMonkeytypeActive = false;
+      }
+
+      cleanupAudio();
     }
 
     async function startLiveReading() {
+      cleanupAudio();
+
       if (!navigator.mediaDevices?.getUserMedia || !window.WebSocket) {
         status.textContent = 'This browser does not support live microphone checking.';
         return;
@@ -1161,9 +1934,7 @@
           microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, noiseSuppression: true } });
         } catch (err) {
           status.textContent = 'Microphone access is required to check your reading.';
-          readingButton.disabled = false;
-          readingButton.textContent = 'Start Reading';
-          readingButton.classList.remove('active-reading');
+          cleanupAudio();
           return;
         }
 
@@ -1172,7 +1943,7 @@
           await audioContext.resume();
         }
         audioSource = audioContext.createMediaStreamSource(microphoneStream);
-        audioProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+        audioProcessor = audioContext.createScriptProcessor(16384, 1, 1);
         audioProcessor.onaudioprocess = event => {
           if (liveSocket?.readyState === WebSocket.OPEN) {
             const data = pcmChunkToBase64(event.inputBuffer.getChannelData(0), audioContext.sampleRate);
@@ -1183,65 +1954,82 @@
         audioProcessor.connect(audioContext.destination);
 
         const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-        liveSocket = new WebSocket(`${scheme}://${location.host}/ws/reading`);
+        const socket = new WebSocket(`${scheme}://${location.host}/ws/reading`);
+        liveSocket = socket;
 
-        liveSocket.addEventListener('open', () => {
+        socket.addEventListener('open', () => {
+          if (liveSocket !== socket) return;
           readingButton.disabled = false;
           readingButton.textContent = 'Stop Reading';
           readingButton.classList.add('active-reading');
-          status.textContent = 'Listening and checking your reading live...';
+          
+          initMonkeytype(output.value);
+          renderMonkeytype();
+          status.textContent = 'Speak each word aloud. The yellow highlight shows your active reading position.';
           
           if (captionsOverlay) captionsOverlay.classList.remove('hidden');
           if (captionsText) captionsText.textContent = 'Listening...';
-          
-          resetAutoStopTimer();
         });
 
-        liveSocket.addEventListener('message', event => {
+        socket.addEventListener('message', event => {
+          if (liveSocket !== socket) return;
           const data = JSON.parse(event.data);
           if (data.type === 'error') {
             status.textContent = data.error;
-            if (liveSocket) liveSocket.close();
+            cleanupAudio();
             return;
           }
           const transcript = data.data?.transcript || data.transcript;
           if (transcript) {
             liveTranscript = mergeTranscripts(liveTranscript, transcript);
-            if (spokenOutput) spokenOutput.value = liveTranscript;
-            renderComparison(output.value, liveTranscript);
-            status.textContent = 'Checking your reading live. Green words are correct, Coral words were said wrong, Amber words are missing.';
+            
+            if (isMonkeytypeActive) {
+              const spokenWords = normalizedWords(liveTranscript);
+              const statuses = alignReadingDP(monkeytypeWords, spokenWords, 0.70);
+              if (statuses && statuses.length > 0) {
+                monkeytypeStatus = statuses;
+                
+                // Find the first pending word index
+                const firstPending = statuses.findIndex(s => s === 'pending');
+                monkeytypeCurrentIndex = firstPending !== -1 ? firstPending : monkeytypeWords.length;
+                
+                // Collect difficult words
+                monkeytypeDifficultWords = [];
+                statuses.forEach((status, idx) => {
+                  if (status === 'wrong' || status === 'partial') {
+                    const w = monkeytypeWords[idx];
+                    if (!monkeytypeDifficultWords.includes(w)) {
+                      monkeytypeDifficultWords.push(w);
+                    }
+                  }
+                });
+                
+                renderMonkeytype();
+              }
+            } else {
+              if (spokenOutput) spokenOutput.value = liveTranscript;
+              renderComparison(output.value, liveTranscript);
+            }
             
             if (captionsText) captionsText.textContent = transcript;
-            
-            resetAutoStopTimer();
           }
         });
 
-        liveSocket.addEventListener('error', () => {
-          status.textContent = 'Live transcription connection failed.';
+        socket.addEventListener('error', () => {
+          if (liveSocket !== socket) return;
+          status.textContent = 'Live transcription connection error.';
           cleanupAudio();
-          readingButton.classList.remove('active-reading');
         });
 
-        liveSocket.addEventListener('close', () => {
-          cleanupAudio();
-          if (stopRequested) {
-            status.textContent = 'Reading check complete. Coral words need review, green words are correct.';
-          } else {
-            status.textContent = 'Connection closed.';
+        socket.addEventListener('close', () => {
+          if (liveSocket === socket) {
+            cleanupAudio();
           }
-          readingButton.disabled = false;
-          readingButton.textContent = 'Start Reading';
-          readingButton.classList.remove('active-reading');
-          liveSocket = null;
         });
 
       } catch (error) {
         cleanupAudio();
         status.textContent = 'The local server is unavailable. Start it with the Sarvam API key, then reload this page.';
-        readingButton.disabled = false;
-        readingButton.textContent = 'Start Reading';
-        readingButton.classList.remove('active-reading');
       }
     }
 
@@ -1339,78 +2127,112 @@
       }
     }
 
+    const definitionCache = new Map();
+    let hoverTimer = null;
+    let hideTimer = null;
+
     async function showWordDefinition(word, element) {
-      const popup = document.getElementById('definition-popup');
-      popup.classList.remove('show', 'popup-below');
-      popup.innerHTML = `
-        <div class="def-loading">
-          <span class="def-spinner"></span>
-          <span>Loading meaning...</span>
-        </div>
-      `;
+      if (!word || !element) return;
+      const cleanWord = word.replace(/[^\p{L}\p{M}]/gu, '').trim();
+      if (!cleanWord) return;
 
-      // Position using viewport coordinates (popup is position:fixed)
+      const bubble = document.getElementById('definition-bubble');
+      const bubbleWord = document.getElementById('bubble-word');
+      const bubblePos = document.getElementById('bubble-pos');
+      const bubbleIpa = document.getElementById('bubble-ipa');
+      const bubbleContent = document.getElementById('bubble-content');
+      const bubbleMeta = document.getElementById('bubble-meta');
+      const bubbleLink = document.getElementById('bubble-link');
+
+      if (!bubble) return;
+
+      bubbleWord.textContent = cleanWord;
+      bubblePos.textContent = '';
+      bubbleIpa.textContent = '';
+      bubbleMeta.innerHTML = '';
+      bubbleMeta.classList.add('hidden');
+      bubbleContent.innerHTML = '<span class="spinner"></span> Loading meaning from FreeDictionaryAPI…';
+      bubbleLink.href = `https://en.wiktionary.org/wiki/${encodeURIComponent(cleanWord)}`;
+
       const rect = element.getBoundingClientRect();
-      const popupWidth = 280;
-      const left = rect.left + (rect.width / 2) - (popupWidth / 2);
-      const maxLeft = window.innerWidth - popupWidth - 16;
-      popup.style.left = `${Math.max(16, Math.min(left, maxLeft))}px`;
-      popup.style.transform = '';
+      const scrollX = window.scrollX || window.pageXOffset;
+      const scrollY = window.scrollY || window.pageYOffset;
 
-      // Prefer above the word, fall back to below if too close to top
-      const spaceAbove = rect.top;
-      if (spaceAbove < 180) {
-        popup.style.top = `${rect.bottom + 12}px`;
-        popup.classList.add('popup-below');
-      } else {
-        // Place above: anchor bottom of popup to top of word
-        popup.style.top = `${rect.top - 12}px`;
-        popup.style.transform = 'translateY(-100%)';
-        popup.classList.remove('popup-below');
+      bubble.classList.remove('hidden');
+      const bubbleRect = bubble.getBoundingClientRect();
+
+      let left = rect.left + scrollX + (rect.width / 2) - (bubbleRect.width / 2);
+      let top = rect.top + scrollY - bubbleRect.height - 12;
+
+      if (rect.top - bubbleRect.height - 12 < 10) {
+        top = rect.bottom + scrollY + 12;
       }
 
-      // Show with animation (set class AFTER positioning so transition starts correctly)
-      requestAnimationFrame(() => {
-        popup.classList.add('show');
-      });
+      left = Math.max(10, Math.min(window.innerWidth - bubbleRect.width - 10, left));
+
+      bubble.style.left = `${left}px`;
+      bubble.style.top = `${top}px`;
+
+      if (definitionCache.has(cleanWord)) {
+        renderBubbleData(definitionCache.get(cleanWord), cleanWord);
+        return;
+      }
 
       try {
-        const response = await fetch(`/api/define?word=${encodeURIComponent(word)}`, {
+        const response = await fetch(`/api/define?word=${encodeURIComponent(cleanWord)}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (!response.ok) throw new Error('Network error');
         const data = await response.json();
-        if (data.found) {
-          const isPartial = Boolean(data.partial_match);
-          const badgeHtml = isPartial
-            ? `<span class="component-badge" style="background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; display: inline-block; margin-left: 6px; font-weight: 500;">Part of this word</span>`
-            : '';
-          popup.innerHTML = `
-            <div class="def-word">${escapeHtml(data.word)}${badgeHtml}</div>
-            ${data.part_of_speech ? `<div class="def-pos">${escapeHtml(data.part_of_speech)}</div>` : ''}
-            <div class="def-meaning">${escapeHtml(data.definition)}</div>
-            <div class="def-attribution">
-              ${escapeHtml(data.attribution || '')}
-              ${data.source_url ? `<br/><a href="${escapeHtml(data.source_url)}" target="_blank" rel="noopener">View source on Wiktionary &rarr;</a>` : ''}
-            </div>
-          `;
-        } else {
-          popup.innerHTML = `
-            <div class="def-word">${escapeHtml(word)}</div>
-            <div class="def-meaning" style="font-style: italic; color: var(--text-muted);">No definition available for this word yet.</div>
-          `;
-        }
+        definitionCache.set(cleanWord, data);
+        renderBubbleData(data, cleanWord);
       } catch (error) {
-        popup.innerHTML = `
-          <div class="def-word">${escapeHtml(word)}</div>
-          <div class="def-meaning" style="color: var(--word-attention);">Couldn't load definition right now.</div>
-        `;
+        bubbleContent.textContent = "Could not load definition right now.";
+      }
+    }
+
+    function renderBubbleData(data, queriedWord) {
+      const bubbleWord = document.getElementById('bubble-word');
+      const bubblePos = document.getElementById('bubble-pos');
+      const bubbleIpa = document.getElementById('bubble-ipa');
+      const bubbleContent = document.getElementById('bubble-content');
+      const bubbleMeta = document.getElementById('bubble-meta');
+      const bubbleLink = document.getElementById('bubble-link');
+
+      if (!data || !data.found || !data.definition) {
+        bubbleContent.textContent = `No dictionary definition found for "${queriedWord}".`;
+        return;
+      }
+
+      bubbleWord.textContent = data.word || queriedWord;
+      if (data.part_of_speech) {
+        bubblePos.textContent = data.part_of_speech;
+      }
+      if (data.ipa) {
+        bubbleIpa.textContent = `[${data.ipa}]`;
+      }
+      bubbleContent.textContent = data.definition;
+
+      const metaList = [];
+      if (data.examples && data.examples.length) {
+        metaList.push(`<div style="margin-top: 4px; font-style: italic;">e.g. "${escapeHtml(data.examples[0])}"</div>`);
+      }
+      if (data.translations && data.translations.length) {
+        metaList.push(`<div style="margin-top: 4px;"><strong>Translation:</strong> ${escapeHtml(data.translations.join(', '))}</div>`);
+      }
+      if (metaList.length) {
+        bubbleMeta.innerHTML = metaList.join('');
+        bubbleMeta.classList.remove('hidden');
+      }
+
+      if (data.source_url) {
+        bubbleLink.href = data.source_url;
       }
     }
 
     function escapeHtml(text) {
       if (!text) return '';
-      return text
+      return String(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -1418,13 +2240,56 @@
         .replace(/'/g, "&#039;");
     }
 
-    document.addEventListener('click', (event) => {
-      const popup = document.getElementById('definition-popup');
-      if (popup && popup.classList.contains('show') && !popup.contains(event.target)) {
-        popup.classList.remove('show');
-        popup.classList.remove('popup-below');
+    function hideWordDefinitionBubble() {
+      const bubble = document.getElementById('definition-bubble');
+      if (bubble) bubble.classList.add('hidden');
+    }
+
+    comparison.addEventListener('mouseover', (event) => {
+      const wordSpan = event.target.closest('.monkeytype-word, .result-word, .word, .spoken-word');
+      if (!wordSpan) return;
+      clearTimeout(hideTimer);
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        showWordDefinition(wordSpan.textContent.trim(), wordSpan);
+      }, 250);
+    });
+
+    comparison.addEventListener('mouseout', (event) => {
+      const wordSpan = event.target.closest('.monkeytype-word, .result-word, .word, .spoken-word');
+      if (!wordSpan) return;
+      clearTimeout(hoverTimer);
+      const bubble = document.getElementById('definition-bubble');
+      hideTimer = setTimeout(() => {
+        if (bubble && !bubble.matches(':hover')) {
+          hideWordDefinitionBubble();
+        }
+      }, 250);
+    });
+
+    comparison.addEventListener('click', (event) => {
+      const wordSpan = event.target.closest('.monkeytype-word, .result-word, .word, .spoken-word');
+      if (wordSpan) {
+        playWordPronunciation(wordSpan.textContent.trim());
+        showWordDefinition(wordSpan.textContent.trim(), wordSpan);
       }
     });
+
+    document.addEventListener('click', (event) => {
+      const bubble = document.getElementById('definition-bubble');
+      if (!bubble || bubble.classList.contains('hidden')) return;
+      if (event.target.closest('#bubble-close') || (!bubble.contains(event.target) && !event.target.closest('.monkeytype-word, .result-word, .word, .spoken-word'))) {
+        hideWordDefinitionBubble();
+      }
+    });
+
+    const bubbleEl = document.getElementById('definition-bubble');
+    if (bubbleEl) {
+      bubbleEl.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+      bubbleEl.addEventListener('mouseleave', () => {
+        hideTimer = setTimeout(hideWordDefinitionBubble, 250);
+      });
+    }
   </script>
 </body>
 </html>

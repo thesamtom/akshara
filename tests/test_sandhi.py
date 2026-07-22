@@ -87,3 +87,16 @@ def test_sandhi_dictionary_lookup_integration(tmp_path) -> None:
         assert res.get("tier") == 2
         assert "Part of this word:" in res["definition"]
         assert len(res.get("components", [])) == 2
+
+
+def test_tier1_alignment_recovery_after_mismatch() -> None:
+    # Expected: "മേശപ്പുറത്ത് ഉണ്ട് ആന അവിടെ ഉണ്ട്"
+    # Spoken: "മേശപ്പുറത്ത് ഉണ്ട് പൂച്ച അവിടെ ഉണ്ട്"
+    expected = "മേശപ്പുറത്ത് ഉണ്ട് ആന അവിടെ ഉണ്ട്"
+    spoken = "മേശപ്പുറത്ത് ഉണ്ട് പൂച്ച അവിടെ ഉണ്ട്"
+
+    res = align_reading_sandhi(expected, spoken, similarity_threshold=0.80)
+    assert res["expected_status"] == ["correct", "correct", "wrong", "correct", "correct"]
+    assert res["spoken_status"] == ["correct", "correct", "wrong", "correct", "correct"]
+    assert res["accuracy"] == 80  # 4 out of 5 correct
+

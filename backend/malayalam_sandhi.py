@@ -129,7 +129,13 @@ def normalize_text(text: str) -> str:
     if not text:
         return ""
     normalized = unicodedata.normalize("NFC", text.strip())
-    # Remove zero-width non-joiner (U+200C), zero-width joiner (U+200D), BOM
+    # Normalize explicit legacy ZWJ chillu sequences to atomic chillus
+    normalized = re.sub(r"\u0D28\u0D4D\u200D", "\u0D7B", normalized)
+    normalized = re.sub(r"\u0D30\u0D4D\u200D", "\u0D7C", normalized)
+    normalized = re.sub(r"\u0D32\u0D4D\u200D", "\u0D7D", normalized)
+    normalized = re.sub(r"\u0D33\u0D4D\u200D", "\u0D7E", normalized)
+    normalized = re.sub(r"\u0D23\u0D4D\u200D", "\u0D7F", normalized)
+    # Remove other joiners
     cleaned = re.sub(r"[\u200B-\u200D\uFEFF]", "", normalized)
     return cleaned
 
@@ -151,10 +157,19 @@ def tokenize_words(text: str) -> list[str]:
 # Tier 1 — Sandhi-Tolerant Live Speech Alignment Engine
 # ============================================================================
 
+def phonetic_simplify(s: str) -> str:
+    """Simplifies Malayalam chillus and trailing vowels for similarity comparison."""
+    # Replace chillus with basic consonants
+    s = s.replace("ൻ", "ന").replace("ർ", "ര").replace("ൽ", "ല").replace("ൾ", "ള").replace("ൺ", "ണ")
+    # Remove trailing samvruthokaram (്) and u vowel (ു)
+    s = re.sub(r"[്ു]+$", "", s)
+    return s
+
+
 def string_similarity(s1: str, s2: str) -> float:
     """Calculates similarity score (0.0 to 1.0) between two Malayalam strings."""
-    s1_norm = normalize_text(s1)
-    s2_norm = normalize_text(s2)
+    s1_norm = phonetic_simplify(normalize_text(s1))
+    s2_norm = phonetic_simplify(normalize_text(s2))
     if not s1_norm or not s2_norm:
         return 1.0 if s1_norm == s2_norm else 0.0
     if s1_norm == s2_norm:
@@ -205,11 +220,11 @@ def create_sandhi_variants(w1: str, w2: str) -> list[str]:
 def align_reading_sandhi(
     expected_text: str,
     spoken_text: str,
-    similarity_threshold: float = 0.80
+    similarity_threshold: float = 0.70
 ) -> dict:
     """Performs sequence alignment of spoken transcript against expected textbook text,
-
-    handling 1-2 word sliding windows with Sandhi tolerance.
+    handling deletions, insertions, and 1-2 word sliding windows with Sandhi tolerance.
+    Uses dynamic programming (edit distance) for global alignment sequence recovery.
     """
     expected_tokens = tokenize_words(expected_text)
     spoken_tokens = tokenize_words(spoken_text)
@@ -241,69 +256,115 @@ def align_reading_sandhi(
             "missing_count": m
         }
 
+    # Helper function to get match cost (1-to-1)
+    def get_match_cost(w1: str, w2: str) -> float:
+        sim = string_similarity(w1, w2)
+        if sim >= similarity_threshold:
+            return 1.0 - sim
+        return 1.0  # Mismatch penalty
+
+    # Helper function to get 2-to-1 sandhi max similarity
+    def get_sandhi_similarity(w1: str, w2: str, target: str) -> float:
+        variants = create_sandhi_variants(w1, w2)
+        return max(string_similarity(var, target) for var in variants)
+
+    # Initialize DP table
+    inf = float("inf")
+    dp = [[inf] * (n + 1) for _ in range(m + 1)]
+    dp[0][0] = 0.0
+
+    for i in range(1, m + 1):
+        dp[i][0] = dp[i-1][0] + 1.0
+    for j in range(1, n + 1):
+        dp[0][j] = dp[0][j-1] + 1.0
+
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            # Option 1: Deletion of expected word (missing in spoken)
+            cost_del = dp[i-1][j] + 1.0
+
+            # Option 2: Insertion of spoken word (extra in spoken)
+            cost_ins = dp[i][j-1] + 1.0
+
+            # Option 3: 1-to-1 Match/Substitution
+            cost_match_1to1 = dp[i-1][j-1] + get_match_cost(expected_tokens[i-1], spoken_tokens[j-1])
+
+            # Option 4: 2 Expected -> 1 Spoken (Sandhi compound in spoken)
+            cost_match_2to1 = inf
+            if i >= 2:
+                sim_2exp = get_sandhi_similarity(expected_tokens[i-2], expected_tokens[i-1], spoken_tokens[j-1])
+                if sim_2exp >= similarity_threshold:
+                    cost_match_2to1 = dp[i-2][j-1] + (1.0 - sim_2exp)
+
+            # Option 5: 1 Expected -> 2 Spoken (Spoken split sandhi compound)
+            cost_match_1to2 = inf
+            if j >= 2:
+                sim_2spk = get_sandhi_similarity(spoken_tokens[j-2], spoken_tokens[j-1], expected_tokens[i-1])
+                if sim_2spk >= similarity_threshold:
+                    cost_match_1to2 = dp[i-1][j-2] + (1.0 - sim_2spk)
+
+            dp[i][j] = min(cost_del, cost_ins, cost_match_1to1, cost_match_2to1, cost_match_1to2)
+
+    # Backtracking to reconstruct the alignment status
     expected_status = ["missing"] * m
     spoken_status = ["extra"] * n
 
-    i = 0  # Index into expected_tokens
-    j = 0  # Index into spoken_tokens
+    i, j = m, n
+    while i > 0 or j > 0:
+        # Check 1-to-1 Match/Substitution
+        if i > 0 and j > 0:
+            match_cost = get_match_cost(expected_tokens[i-1], spoken_tokens[j-1])
+            if abs(dp[i][j] - (dp[i-1][j-1] + match_cost)) < 1e-5:
+                sim = string_similarity(expected_tokens[i-1], spoken_tokens[j-1])
+                status = "correct" if sim >= similarity_threshold else "wrong"
+                expected_status[i-1] = status
+                spoken_status[j-1] = status
+                i -= 1
+                j -= 1
+                continue
 
-    while i < m and j < n:
-        exp_w = expected_tokens[i]
-        spk_w = spoken_tokens[j]
+        # Check 2-to-1 Sandhi Match
+        if i >= 2 and j > 0:
+            sim = get_sandhi_similarity(expected_tokens[i-2], expected_tokens[i-1], spoken_tokens[j-1])
+            if sim >= similarity_threshold and abs(dp[i][j] - (dp[i-2][j-1] + (1.0 - sim))) < 1e-5:
+                expected_status[i-1] = "correct"
+                expected_status[i-2] = "correct"
+                spoken_status[j-1] = "correct"
+                i -= 2
+                j -= 1
+                continue
 
-        sim_1to1 = string_similarity(exp_w, spk_w)
+        # Check 1-to-2 Sandhi Match
+        if i > 0 and j >= 2:
+            sim = get_sandhi_similarity(spoken_tokens[j-2], spoken_tokens[j-1], expected_tokens[i-1])
+            if sim >= similarity_threshold and abs(dp[i][j] - (dp[i-1][j-2] + (1.0 - sim))) < 1e-5:
+                expected_status[i-1] = "correct"
+                spoken_status[j-1] = "correct"
+                spoken_status[j-2] = "correct"
+                i -= 1
+                j -= 2
+                continue
 
-        sim_2exp = 0.0
-        if i + 1 < m:
-            w1, w2 = expected_tokens[i], expected_tokens[i + 1]
-            variants = create_sandhi_variants(w1, w2)
-            sim_2exp = max(string_similarity(var, spk_w) for var in variants)
-
-        sim_2spk = 0.0
-        if j + 1 < n:
-            s1, s2 = spoken_tokens[j], spoken_tokens[j + 1]
-            variants = create_sandhi_variants(s1, s2)
-            sim_2spk = max(string_similarity(exp_w, var) for var in variants)
-
-        # Exact 1-to-1 match
-        if sim_1to1 == 1.0:
-            expected_status[i] = "correct"
-            spoken_status[j] = "correct"
-            i += 1
-            j += 1
+        # Check Deletion
+        if i > 0 and abs(dp[i][j] - (dp[i-1][j] + 1.0)) < 1e-5:
+            expected_status[i-1] = "missing"
+            i -= 1
             continue
 
-        # 2 Expected -> 1 Spoken (Sandhi compound in spoken transcript)
-        if sim_2exp >= similarity_threshold and sim_2exp > sim_1to1:
-            expected_status[i] = "correct"
-            expected_status[i + 1] = "correct"
-            spoken_status[j] = "correct"
-            i += 2
-            j += 1
+        # Check Insertion
+        if j > 0 and abs(dp[i][j] - (dp[i][j-1] + 1.0)) < 1e-5:
+            spoken_status[j-1] = "extra"
+            j -= 1
             continue
 
-        # 1 Expected -> 2 Spoken (Spoken split sandhi compound)
-        if sim_2spk >= similarity_threshold and sim_2spk > sim_1to1:
-            expected_status[i] = "correct"
-            spoken_status[j] = "correct"
-            spoken_status[j + 1] = "correct"
-            i += 1
-            j += 2
-            continue
-
-        # 1-to-1 Fuzzy match
-        if sim_1to1 >= similarity_threshold:
-            expected_status[i] = "correct"
-            spoken_status[j] = "correct"
-            i += 1
-            j += 1
-            continue
-
-        # Flag mismatch & advance greedy
-        expected_status[i] = "wrong"
-        spoken_status[j] = "wrong"
-        i += 1
-        j += 1
+        # Fallback to greedy decrement to prevent infinite loop
+        if i > 0 and j > 0:
+            i -= 1
+            j -= 1
+        elif i > 0:
+            i -= 1
+        elif j > 0:
+            j -= 1
 
     # Calculate statistics
     correct_count = expected_status.count("correct")

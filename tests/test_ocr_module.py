@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import MagicMock, patch
 
 import cv2
 import numpy as np
 import pytest
 
 from ocr.engines.base import OCRLine, OCRResult
-from ocr.errors import NoTextDetectedError, OCRProcessingError
+from ocr.engines.gemini import GeminiEngine
+from ocr.errors import NoTextDetectedError, OCRConfigurationError, OCRProcessingError
+from ocr.pipeline import process_image
 from ocr.postprocess import finalize_result
 from ocr.preprocess import PreprocessConfig, load_image, preprocess_image
 
@@ -40,7 +43,6 @@ def test_unsupported_file_has_clear_error(tmp_path) -> None:
 
 
 def test_result_is_normalized_structured_json_and_flags_low_confidence() -> None:
-    # Decomposed e + acute is a simple NFC normalization sentinel independent of OCR fonts.
     result = OCRResult(
         raw_text="e\u0301",
         lines=[OCRLine("e\u0301", confidence=0.40, bbox=(0, 0, 10, 10))],
@@ -58,3 +60,61 @@ def test_result_is_normalized_structured_json_and_flags_low_confidence() -> None
 def test_no_text_error_is_typed() -> None:
     with pytest.raises(NoTextDetectedError):
         raise NoTextDetectedError("No text")
+
+
+def test_gemini_engine_extract_success() -> None:
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "മലയാളം വായന"
+    mock_client.models.generate_content.return_value = mock_response
+
+    engine = GeminiEngine(api_key="fake-key", client=mock_client)
+    fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+    res = engine.extract(fake_img)
+
+    assert res.raw_text == "മലയാളം വായന"
+    assert res.engine_used == "gemini"
+    mock_client.models.generate_content.assert_called_once()
+    args, kwargs = mock_client.models.generate_content.call_args
+    assert kwargs.get("model") == "gemini-2.5-flash"
+    assert "Malayalam OCR engine" in kwargs.get("contents")[1]
+
+
+def test_gemini_engine_missing_api_key(monkeypatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setattr("ocr.engines.gemini._load_local_env", lambda: None)
+    with pytest.raises(OCRConfigurationError, match="GEMINI_API_KEY"):
+        GeminiEngine()
+
+
+def test_gemini_engine_retry_on_failure() -> None:
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "വിജയം"
+
+    # Fail twice, succeed on 3rd attempt
+    mock_client.models.generate_content.side_effect = [
+        RuntimeError("Transient 503 error"),
+        RuntimeError("Timeout"),
+        mock_response
+    ]
+
+    engine = GeminiEngine(api_key="fake-key", client=mock_client)
+    fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+    res = engine.extract(fake_img)
+
+    assert res.raw_text == "വിജയം"
+    assert mock_client.models.generate_content.call_count == 3
+
+
+def test_gemini_engine_no_text_detected() -> None:
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = ""
+    mock_client.models.generate_content.return_value = mock_response
+
+    engine = GeminiEngine(api_key="fake-key", client=mock_client)
+    fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+    with pytest.raises(NoTextDetectedError):
+        engine.extract(fake_img)

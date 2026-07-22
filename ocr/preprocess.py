@@ -18,9 +18,14 @@ class PreprocessConfig:
     min_dimension: int = 1400
     adaptive_block_size: int = 31
     adaptive_c: int = 11
+    adaptive_binarize: bool = True
 
 
-def load_image(image_path: str | Path, config: PreprocessConfig = PreprocessConfig()) -> np.ndarray:
+def load_image(image_path: str | Path | np.ndarray, config: PreprocessConfig = PreprocessConfig()) -> np.ndarray:
+    if isinstance(image_path, np.ndarray):
+        if image_path.size == 0:
+            raise OCRProcessingError("Image is empty or contains no raster data")
+        return image_path
     path = Path(image_path)
     if path.suffix.lower() not in SUPPORTED_SUFFIXES:
         raise OCRProcessingError(f"Unsupported image format: {path.suffix or 'no extension'}")
@@ -63,14 +68,24 @@ def deskew(image: np.ndarray) -> np.ndarray:
     return cv2.warpAffine(image, matrix, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
+def optimize_image_size(image: np.ndarray, max_dimension: int = 1600) -> np.ndarray:
+    height, width = image.shape[:2]
+    longest = max(height, width)
+    if longest <= max_dimension:
+        return image
+    scale = max_dimension / longest
+    return cv2.resize(image, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+
+
 def preprocess_image(image: np.ndarray, config: PreprocessConfig = PreprocessConfig()) -> np.ndarray:
-    """Return a deskewed, denoised, adaptively binarized BGR image."""
-    enlarged = resize_if_needed(image, config.min_dimension)
-    straightened = deskew(enlarged)
+    """Return a deskewed, optimized BGR image for Gemini/Tesseract OCR."""
+    resized = optimize_image_size(image, max_dimension=1600)
+    straightened = deskew(resized)
+    if not config.adaptive_binarize:
+        return straightened
     gray = cv2.cvtColor(straightened, cv2.COLOR_BGR2GRAY)
-    denoised = cv2.fastNlMeansDenoising(gray, None, h=7, templateWindowSize=7, searchWindowSize=21)
     block = max(3, config.adaptive_block_size | 1)
     binary = cv2.adaptiveThreshold(
-        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block, config.adaptive_c
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block, config.adaptive_c
     )
     return cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)

@@ -15,7 +15,7 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Produce a structured, reviewable Malayalam OCR draft.")
     parser.add_argument("image_path")
-    parser.add_argument("--engine", choices=("tesseract",), default="tesseract")
+    parser.add_argument("--engine", choices=("gemini", "tesseract"), default="gemini")
     parser.add_argument("--tesseract-cmd")
     parser.add_argument("--tessdata-dir", help="Directory containing Malayalam mal.traineddata (normally detected automatically).")
     parser.add_argument("--output", type=Path, help="Write the complete structured result as UTF-8 JSON.")

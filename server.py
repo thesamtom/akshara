@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import socket
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 import mimetypes
@@ -79,13 +80,130 @@ def api_key(kind: str) -> str:
     return key
 
 
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File
+
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("application/json", ".json")
+mimetypes.add_type("application/wasm", ".wasm")
+mimetypes.add_type("application/gzip", ".gz")
+def clean_text_with_openai(text: str) -> str:
+    """Clean OCR text using OpenAI GPT-4o-mini to remove gibberish and artifacts."""
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        return text
+
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+    }
+    system_prompt = (
+        "You are an expert editor specializing in refining Malayalam OCR outputs. "
+        "Your task is to clean up the provided Malayalam text by removing visual gibberish, artifacts, noise characters, "
+        "and fixing obvious OCR typos/broken letterforms.\n\n"
+        "Ensure that:\n"
+        "1. The output contains ONLY the cleaned Malayalam text. Do not add any introduction, explanation, comments, or formatting wrappers.\n"
+        "2. Format the output as a single continuous sentence/line. Remove all line breaks and join the words with spaces to form a single continuous line of text.\n"
+        "3. Strictly preserve the original meaning and words of the source text.\n"
+        "4. Do not translate the text.\n"
+        "5. Remove any non-Malayalam characters that are clearly OCR noise or artifacts, but keep any legitimate Malayalam words/punctuation."
+    )
+    body = json.dumps({
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ],
+        "temperature": 0.1,
+    }).encode("utf-8")
+    
+    try:
+        request = Request(
+            url,
+            data=body,
+            headers=headers,
+            method="POST",
+        )
+        with urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        cleaned = result["choices"][0]["message"]["content"].strip()
+        if cleaned:
+            return cleaned
+    except Exception as error:
+        logger.warning(f"OpenAI transcription cleanup failed: {error}. Falling back to raw text.")
+    return text
+
+
 @app.get("/api/health")
 async def health() -> JSONResponse:
     """Allow the browser to explain missing local configuration clearly."""
     return JSONResponse({
         "sarvam_tts_configured": bool(os.environ.get("SARVAM_TTS_API_KEY")),
         "sarvam_stt_configured": bool(os.environ.get("SARVAM_STT_API_KEY")),
+        "gemini_ocr_configured": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
+        "openai_cleanup_configured": bool(os.environ.get("OPENAI_API_KEY")),
     })
+
+
+@app.post("/api/ocr")
+async def process_ocr_image(file: UploadFile = File(...)) -> JSONResponse:
+    if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
+        raise HTTPException(503, "GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY to your .env file.")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(400, "Uploaded image file is empty.")
+
+    def run_gemini_ocr(image_bytes: bytes) -> dict:
+        import cv2
+        import numpy as np
+        import ocr.pipeline
+        from ocr.errors import OCRConfigurationError, OCRProcessingError, NoTextDetectedError
+
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError("Invalid image file format.")
+
+        try:
+            res = ocr.pipeline.process_image(img, engine="gemini")
+            return res.to_dict()
+        except NoTextDetectedError:
+            return {"raw_text": "", "paragraphs": [], "lines": [], "warnings": ["No text detected in image."]}
+
+    try:
+        result = await asyncio.to_thread(run_gemini_ocr, contents)
+        if result.get("raw_text") and os.environ.get("OPENAI_API_KEY"):
+            cleaned_text = await asyncio.to_thread(clean_text_with_openai, result["raw_text"])
+            if cleaned_text != result["raw_text"]:
+                result["raw_text"] = cleaned_text
+                from ocr.engines.base import OCRLine, OCRParagraph
+                raw_lines = [line.strip() for line in cleaned_text.splitlines() if line.strip()]
+                lines_objs = [OCRLine(text=line, confidence=0.99) for line in raw_lines]
+                paragraph_obj = OCRParagraph(text=cleaned_text, lines=lines_objs)
+                result["lines"] = [line.to_dict() for line in lines_objs]
+                result["paragraphs"] = [paragraph_obj.to_dict()]
+        return JSONResponse(result)
+    except ValueError as err:
+        raise HTTPException(400, str(err))
+    except Exception as error:
+        logger.exception("Gemini OCR extraction failed.")
+        raise HTTPException(502, f"Gemini OCR processing failed: {error}")
+
+
+@app.post("/api/clean")
+async def clean_text_endpoint(payload: dict[str, str]) -> JSONResponse:
+    text = payload.get("text", "").strip()
+    if not text:
+        return JSONResponse({"cleaned_text": ""})
+    if not os.environ.get("OPENAI_API_KEY"):
+        return JSONResponse({"cleaned_text": text})
+    try:
+        cleaned_text = await asyncio.to_thread(clean_text_with_openai, text)
+        return JSONResponse({"cleaned_text": cleaned_text})
+    except Exception as error:
+        logger.warning(f"Failed to clean text: {error}")
+        return JSONResponse({"cleaned_text": text})
 
 
 @app.get("/api/define")
@@ -163,8 +281,8 @@ async def live_reading(client: WebSocket) -> None:
         async with websockets.connect(
             SARVAM_STT_URL,
             additional_headers={"api-subscription-key": key},
-            open_timeout=15,
-            close_timeout=5,
+            open_timeout=10,
+            close_timeout=3,
         ) as sarvam:
             async def forward_transcripts() -> None:
                 async for message in sarvam:
@@ -186,6 +304,11 @@ async def live_reading(client: WebSocket) -> None:
                     await forwarder
     except WebSocketDisconnect:
         return
+    except (socket.gaierror, OSError, TimeoutError, websockets.exceptions.WebSocketException) as error:
+        logger.warning(f"Sarvam STT network lookup/connection failed: {error}")
+        if client.client_state.name == "CONNECTED":
+            await client.send_json({"type": "error", "error": "Unable to reach Sarvam STT service. Please check connection."})
+            await client.close(code=1011)
     except Exception:
         logger.exception("Sarvam live transcription proxy failed")
         if client.client_state.name == "CONNECTED":

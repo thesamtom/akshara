@@ -275,6 +275,104 @@ async def text_to_speech(payload: dict[str, str]) -> JSONResponse:
     return JSONResponse({"audio": audio})
 
 
+@app.post("/api/tutor_feedback")
+async def tutor_feedback(payload: dict) -> JSONResponse:
+    total_words = payload.get("totalWords", 0)
+    correct_words = payload.get("correctWords", 0)
+    partial_words = payload.get("partialWords", 0)
+    incorrect_words = payload.get("incorrectWords", 0)
+    accuracy = payload.get("accuracy", 0)
+    reading_time = payload.get("readingTime", "")
+    average_speed = payload.get("averageSpeed", "")
+    incorrect_word_list = payload.get("incorrectWordList", [])
+    partial_word_list = payload.get("partialWordList", [])
+    observations = payload.get("observations", [])
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        feedback_text = (
+            f"Great effort today! You read with {accuracy}% accuracy in {reading_time}. "
+            f"You got {correct_words} words correct. Keep practicing to improve further!"
+        )
+    else:
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_key}",
+        }
+        
+        system_prompt = (
+            "You are an experienced and encouraging reading tutor for children with dyslexia.\n"
+            "Your job is to analyze the student's reading report and provide supportive, personalized feedback.\n"
+            "Your feedback should:\n"
+            "- Start with positive encouragement.\n"
+            "- Mention what the learner did well.\n"
+            "- Explain the most common pronunciation mistakes.\n"
+            "- Identify any reading patterns observed.\n"
+            "- Suggest practical techniques to improve.\n"
+            "- Recommend which types of words should be practiced.\n"
+            "- End with a short motivational message.\n\n"
+            "Keep the response:\n"
+            "- Friendly, supportive, positive, and easy to understand.\n"
+            "- Around 120–180 words.\n"
+            "- Never discourage or criticize the learner.\n\n"
+            "Avoid phrases like 'You failed', 'You performed poorly', 'Wrong pronunciation'.\n"
+            "Instead use encouraging language such as 'Let's practice this together.', 'You're improving.', 'With a little more practice...', 'Great effort today.'"
+        )
+        
+        user_prompt = json.dumps({
+            "totalWords": total_words,
+            "correctWords": correct_words,
+            "partialWords": partial_words,
+            "incorrectWords": incorrect_words,
+            "accuracy": accuracy,
+            "readingTime": reading_time,
+            "averageSpeed": average_speed,
+            "incorrectWordList": incorrect_word_list,
+            "partialWordList": partial_word_list,
+            "observations": observations
+        }, ensure_ascii=False)
+        
+        body = json.dumps({
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.7,
+        }).encode("utf-8")
+        
+        try:
+            request = Request(
+                url,
+                data=body,
+                headers=headers,
+                method="POST",
+            )
+            with urlopen(request, timeout=30) as response:
+                result = json.loads(response.read().decode("utf-8"))
+            feedback_text = result["choices"][0]["message"]["content"].strip()
+        except Exception as error:
+            logger.warning(f"Failed to generate tutor feedback from OpenAI: {error}")
+            feedback_text = (
+                f"Great effort today! You read with {accuracy}% accuracy in {reading_time}. "
+                f"You got {correct_words} words correct. Keep practicing to improve further!"
+            )
+            
+    audio_base64 = ""
+    sarvam_key = os.environ.get("SARVAM_TTS_API_KEY")
+    if sarvam_key:
+        try:
+            audio_base64 = await asyncio.to_thread(request_tts, feedback_text, sarvam_key)
+        except Exception as error:
+            logger.warning(f"Failed to generate TTS for tutor feedback: {error}")
+
+    return JSONResponse({
+        "feedback_text": feedback_text,
+        "audio_base64": audio_base64
+    })
+
+
 @app.websocket("/ws/reading")
 async def live_reading(client: WebSocket) -> None:
     await client.accept()

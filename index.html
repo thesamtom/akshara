@@ -922,6 +922,88 @@
       text-decoration: underline;
     }
 
+    /* AI Tutor Feedback Styling */
+    .tutor-feedback-section {
+      margin-top: 28px;
+      padding: 24px;
+      border-radius: var(--border-radius);
+      background: rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--card-border);
+      text-align: left;
+    }
+    body.light-theme .tutor-feedback-section {
+      background: rgba(44, 44, 42, 0.02);
+    }
+    .tutor-feedback-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--focus-highlight);
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    body.light-theme .tutor-feedback-title {
+      color: var(--focus-highlight);
+    }
+    .tutor-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      padding: 24px 0;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .tutor-feedback-content {
+      animation: fadeIn 0.3s ease;
+    }
+    .tutor-text {
+      font-size: 1.02rem;
+      line-height: 1.6;
+      color: var(--text-main);
+      margin: 0 0 20px;
+      white-space: pre-line;
+    }
+    .tutor-voice-container {
+      border-top: 1px solid var(--card-border);
+      padding-top: 16px;
+      margin-top: 16px;
+    }
+    .voice-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .voice-btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .voice-btn:hover:not(:disabled) {
+      background: var(--bg-color);
+      transform: translateY(-1px);
+    }
+    .voice-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .voice-btn.playing {
+      background: var(--primary-cta);
+      color: #fff;
+      border-color: transparent;
+    }
+
     /* Clean and Perfect Mobile UI Improvements */
     @media (max-width: 600px) {
       body {
@@ -1058,6 +1140,30 @@
         transform: translateY(100%) !important;
         opacity: 0 !important;
         pointer-events: none !important;
+      }
+
+      .tutor-feedback-section {
+        padding: 18px 14px;
+        margin-top: 20px;
+      }
+      .tutor-feedback-title {
+        font-size: 1.15rem;
+      }
+      .tutor-text {
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .voice-controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        width: 100%;
+      }
+      .voice-btn {
+        width: 100%;
+        padding: 10px 4px;
+        font-size: 0.82rem;
+        text-align: center;
       }
     }
   </style>
@@ -1413,6 +1519,32 @@
         }
       });
       
+      // Analyze patterns (long words, conjunct consonants, skipped words)
+      const observations = [];
+      let hasLongWordIssue = false;
+      let hasConjunctIssue = false;
+      let hasSkippedIssue = false;
+      
+      monkeytypeWords.forEach((word, idx) => {
+        const status = monkeytypeStatus[idx];
+        if (status === 'partial' || status === 'wrong' || status === 'pending') {
+          if (status === 'pending') {
+            hasSkippedIssue = true;
+          } else {
+            if (word.length > 7) hasLongWordIssue = true;
+            // Malayalam conjunct contains a virama '്' (\u0D4D) not at the end of the word
+            if (word.slice(0, -1).includes('\u0D4D')) hasConjunctIssue = true;
+          }
+        }
+      });
+      
+      if (hasLongWordIssue) observations.push("Difficulty with long Malayalam words");
+      if (hasConjunctIssue) observations.push("Difficulty reading words containing കൂട്ടക്ഷരങ്ങൾ (conjunct consonants)");
+      if (hasSkippedIssue) observations.push("Skipped some words during reading");
+      if (observations.length === 0 && accuracy > 90) {
+        observations.push("Smooth word connections and steady rhythm");
+      }
+      
       comparison.innerHTML = '';
       
       const summaryDiv = document.createElement('div');
@@ -1471,6 +1603,32 @@
             </div>
           </div>
         ` : ''}
+
+        <div class="tutor-feedback-section" id="tutor-feedback-section">
+          <div class="tutor-feedback-title">
+            <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+            </svg>
+            AI Reading Tutor Feedback
+          </div>
+          <div id="tutor-feedback-loading" class="tutor-loading">
+            <span class="spinner"></span> Preparing your tutor's audio & text feedback...
+          </div>
+          <div id="tutor-feedback-content" class="tutor-feedback-content hidden">
+            <p id="tutor-feedback-text" class="tutor-text"></p>
+            
+            <div class="tutor-voice-container" id="tutor-voice-section">
+              <p class="section-title">Listen to Your Tutor:</p>
+              <div class="voice-controls">
+                <button type="button" id="tutor-play-btn" class="voice-btn">▶ Play</button>
+                <button type="button" id="tutor-pause-btn" class="voice-btn" disabled>⏸ Pause</button>
+                <button type="button" id="tutor-replay-btn" class="voice-btn">🔄 Replay</button>
+              </div>
+            </div>
+          </div>
+        </div>
         
         <div class="summary-actions">
           ${difficultList.length > 0 ? `
@@ -1500,6 +1658,118 @@
           renderMonkeytype();
           startLiveReading();
         });
+      }
+
+      // Clean up any old tutor audio
+      if (tutorAudio) {
+        try { tutorAudio.pause(); } catch(e) {}
+        tutorAudio = null;
+      }
+
+      // Request feedback asynchronously
+      const averageSpeedWPM = durationSeconds > 0 ? `${Math.round(total / (durationSeconds / 60))} WPM` : '0 WPM';
+      fetchTutorFeedback({
+        totalWords: total,
+        correctWords: correctCount,
+        partialWords: partialCount,
+        incorrectWords: wrongCount,
+        accuracy: accuracy,
+        readingTime: durationFormatted,
+        averageSpeed: averageSpeedWPM,
+        incorrectWordList: monkeytypeWords.filter((w, idx) => monkeytypeStatus[idx] === 'wrong'),
+        partialWordList: monkeytypeWords.filter((w, idx) => monkeytypeStatus[idx] === 'partial'),
+        observations: observations
+      });
+    }
+
+    let tutorAudio = null;
+
+    async function fetchTutorFeedback(report) {
+      const loadingDiv = document.getElementById('tutor-feedback-loading');
+      const contentDiv = document.getElementById('tutor-feedback-content');
+      const textP = document.getElementById('tutor-feedback-text');
+      
+      try {
+        const response = await fetch('/api/tutor_feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(report)
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate feedback');
+        
+        const data = await response.json();
+        
+        if (loadingDiv) loadingDiv.classList.add('hidden');
+        if (contentDiv) contentDiv.classList.remove('hidden');
+        if (textP) textP.textContent = data.feedback_text;
+        
+        if (data.audio_base64) {
+          const bytes = Uint8Array.from(atob(data.audio_base64), char => char.charCodeAt(0));
+          const audioBlob = new Blob([bytes], { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          if (tutorAudio) {
+            tutorAudio.pause();
+          }
+          tutorAudio = new Audio(audioUrl);
+          
+          const playBtn = document.getElementById('tutor-play-btn');
+          const pauseBtn = document.getElementById('tutor-pause-btn');
+          const replayBtn = document.getElementById('tutor-replay-btn');
+          
+          tutorAudio.addEventListener('play', () => {
+            if (playBtn) {
+              playBtn.disabled = true;
+              playBtn.classList.add('playing');
+              playBtn.textContent = '🔊 Playing';
+            }
+            if (pauseBtn) pauseBtn.disabled = false;
+          });
+          
+          tutorAudio.addEventListener('pause', () => {
+            if (playBtn) {
+              playBtn.disabled = false;
+              playBtn.classList.remove('playing');
+              playBtn.textContent = '▶ Play';
+            }
+            if (pauseBtn) pauseBtn.disabled = true;
+          });
+          
+          tutorAudio.addEventListener('ended', () => {
+            if (playBtn) {
+              playBtn.disabled = false;
+              playBtn.classList.remove('playing');
+              playBtn.textContent = '▶ Play';
+            }
+            if (pauseBtn) pauseBtn.disabled = true;
+          });
+          
+          if (playBtn) {
+            playBtn.onclick = () => tutorAudio.play();
+          }
+          if (pauseBtn) {
+            pauseBtn.onclick = () => tutorAudio.pause();
+          }
+          if (replayBtn) {
+            replayBtn.onclick = () => {
+              tutorAudio.currentTime = 0;
+              tutorAudio.play();
+            };
+          }
+          
+          // Auto-play the feedback audio
+          tutorAudio.play().catch(err => console.warn('Audio auto-play blocked by browser:', err));
+        } else {
+          // Hide voice section if no audio returned
+          const voiceSec = document.getElementById('tutor-voice-section');
+          if (voiceSec) voiceSec.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error('Error fetching tutor feedback:', err);
+        if (loadingDiv) {
+          loadingDiv.textContent = 'Could not load tutor feedback at this time. Please check your connection.';
+        }
       }
     }
 
@@ -1970,6 +2240,10 @@
         readingButton.disabled = false;
         readingButton.textContent = 'Start Reading';
         readingButton.classList.remove('active-reading');
+      }
+      if (tutorAudio) {
+        try { tutorAudio.pause(); } catch(e) {}
+        tutorAudio = null;
       }
     }
 

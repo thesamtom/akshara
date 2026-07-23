@@ -921,6 +921,145 @@
     .bubble-footer a:hover {
       text-decoration: underline;
     }
+
+    /* Clean and Perfect Mobile UI Improvements */
+    @media (max-width: 600px) {
+      body {
+        padding: 12px 8px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+      }
+      main {
+        padding: 20px 16px;
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        width: 100%;
+        margin-top: 10px;
+      }
+      h1 {
+        font-size: 1.7rem;
+        margin-bottom: 20px;
+      }
+      .upload {
+        min-height: 130px;
+        padding: 20px 16px;
+      }
+      .upload p {
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+      }
+      .upload-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+      }
+      .upload-buttons button {
+        padding: 10px 12px;
+        font-size: 0.88rem;
+        width: 100%;
+      }
+      #convert {
+        margin: 16px 0 12px;
+        padding: 12px;
+        font-size: 0.95rem;
+      }
+      .actions-bar {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: 
+          "play pause"
+          "reading reading";
+        gap: 8px;
+      }
+      #play { grid-area: play; }
+      #pause { grid-area: pause; }
+      #reading { grid-area: reading; }
+      
+      .actions-bar button {
+        padding: 12px 10px;
+        font-size: 0.88rem;
+      }
+      
+      textarea {
+        min-height: 140px;
+        padding: 12px;
+        font-size: 0.9rem;
+      }
+      
+      #comparison {
+        padding: 12px;
+        margin-top: 16px;
+      }
+      .word, .spoken-word {
+        font-size: 0.95rem;
+        padding: 1px 8px;
+        margin: 0 3px 5px 0;
+      }
+      
+      .monkeytype-container {
+        padding: 16px;
+        font-size: 1.15rem;
+      }
+      .monkeytype-word {
+        gap: 6px;
+      }
+      
+      .reading-result-paragraph {
+        font-size: 1.15rem;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .result-word {
+        padding: 2px 8px;
+      }
+      
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .summary-card {
+        padding: 12px;
+      }
+      .summary-card .value {
+        font-size: 1.5rem;
+      }
+      
+      #theme-toggle {
+        top: 10px;
+        right: 10px;
+        width: 38px;
+        height: 38px;
+      }
+      #theme-toggle svg {
+        width: 18px;
+        height: 18px;
+      }
+      
+      .definition-bubble {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        top: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 24px 24px 0 0 !important;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4) !important;
+        border: 1px solid var(--card-border) !important;
+        border-bottom: none !important;
+        padding: 20px 16px;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+        transform: translateY(0) !important;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
+      }
+      .definition-bubble.hidden {
+        transform: translateY(100%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2165,17 +2304,27 @@
       bubble.classList.remove('hidden');
       const bubbleRect = bubble.getBoundingClientRect();
 
-      let left = rect.left + scrollX + (rect.width / 2) - (bubbleRect.width / 2);
-      let top = rect.top + scrollY - bubbleRect.height - 12;
+      if (window.innerWidth <= 600) {
+        // Let CSS media queries handle fixed bottom-sheet layout on mobile
+        bubble.style.left = '';
+        bubble.style.top = '';
+        bubble.style.bottom = '';
+        bubble.style.position = '';
+      } else {
+        bubble.style.position = 'absolute';
+        bubble.style.bottom = '';
+        let left = rect.left + scrollX + (rect.width / 2) - (bubbleRect.width / 2);
+        let top = rect.top + scrollY - bubbleRect.height - 12;
 
-      if (rect.top - bubbleRect.height - 12 < 10) {
-        top = rect.bottom + scrollY + 12;
+        if (rect.top - bubbleRect.height - 12 < 10) {
+          top = rect.bottom + scrollY + 12;
+        }
+
+        left = Math.max(10, Math.min(window.innerWidth - bubbleRect.width - 10, left));
+
+        bubble.style.left = `${left}px`;
+        bubble.style.top = `${top}px`;
       }
-
-      left = Math.max(10, Math.min(window.innerWidth - bubbleRect.width - 10, left));
-
-      bubble.style.left = `${left}px`;
-      bubble.style.top = `${top}px`;
 
       if (definitionCache.has(cleanWord)) {
         renderBubbleData(definitionCache.get(cleanWord), cleanWord);

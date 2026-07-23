@@ -155,15 +155,21 @@ async def process_ocr_image(file: UploadFile = File(...)) -> JSONResponse:
         raise HTTPException(400, "Uploaded image file is empty.")
 
     def run_gemini_ocr(image_bytes: bytes) -> dict:
+        import io
+        from PIL import Image, ImageOps
         import cv2
         import numpy as np
         import ocr.pipeline
         from ocr.errors import OCRConfigurationError, OCRProcessingError, NoTextDetectedError
 
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None:
-            raise ValueError("Invalid image file format.")
+        try:
+            pil_img = Image.open(io.BytesIO(image_bytes))
+            pil_img = ImageOps.exif_transpose(pil_img)
+            if pil_img.mode != "RGB":
+                pil_img = pil_img.convert("RGB")
+            img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+        except Exception as e:
+            raise ValueError(f"Invalid image file format: {e}")
 
         try:
             res = ocr.pipeline.process_image(img, engine="gemini")

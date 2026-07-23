@@ -33,9 +33,15 @@ def load_image(image_path: str | Path | np.ndarray, config: PreprocessConfig = P
         raise OCRProcessingError(f"Image file does not exist: {path}")
     if path.stat().st_size > config.max_file_size_bytes:
         raise OCRProcessingError(f"Image exceeds {config.max_file_size_bytes // (1024 * 1024)} MiB limit")
-    image = cv2.imread(str(path), cv2.IMREAD_COLOR)
-    if image is None or image.size == 0:
-        raise OCRProcessingError("Image is unreadable or contains no raster data")
+    try:
+        from PIL import Image, ImageOps
+        pil_img = Image.open(str(path))
+        pil_img = ImageOps.exif_transpose(pil_img)
+        if pil_img.mode != "RGB":
+            pil_img = pil_img.convert("RGB")
+        image = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    except Exception as e:
+        raise OCRProcessingError(f"Image is unreadable or contains no raster data: {e}")
     return image
 
 

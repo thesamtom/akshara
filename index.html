@@ -1587,9 +1587,14 @@
       if (navigator.onLine) {
         status.innerHTML = '<span class="spinner"></span>Transcribing with Gemini OCR…';
         try {
-          const uploadBlob = await compressImageForUpload(imageFile);
+          // Canvas compression can strip/mismangle orientation headers on direct camera captures.
+          // Bypass compression if the file size is under 10MB to preserve EXIF data.
+          let uploadBlob = imageFile;
+          if (imageFile.size > 10 * 1024 * 1024) {
+            uploadBlob = await compressImageForUpload(imageFile);
+          }
           const formData = new FormData();
-          formData.append('file', uploadBlob, imageFile.name);
+          formData.append('file', uploadBlob, imageFile.name || 'image.jpg');
 
           const response = await fetch('/api/ocr', {
             method: 'POST',

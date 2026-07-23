@@ -27,7 +27,7 @@ def test_tutor_feedback_endpoint_fallback_without_keys() -> None:
         assert response.status_code == 200
         data = response.json()
         assert "feedback_text" in data
-        assert "accuracy" in data["feedback_text"]
+        assert "85%" in data["feedback_text"]
         assert data["audio_base64"] == ""
 
 

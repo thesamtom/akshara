@@ -288,11 +288,21 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
     partial_word_list = payload.get("partialWordList", [])
     observations = payload.get("observations", [])
 
+    # Lookup dictionary definitions for incorrect words
+    incorrect_word_definitions = {}
+    for word in incorrect_word_list:
+        try:
+            res = definitions.lookup_word(word)
+            if res.get("found") and res.get("definition"):
+                incorrect_word_definitions[word] = res["definition"]
+        except Exception as e:
+            logger.warning(f"Failed to lookup definitions during tutor feedback generation for '{word}': {e}")
+
     openai_key = os.environ.get("OPENAI_API_KEY")
     if not openai_key:
         feedback_text = (
-            f"Great effort today! You read with {accuracy}% accuracy in {reading_time}. "
-            f"You got {correct_words} words correct. Keep practicing to improve further!"
+            f"വളരെ നല്ല ശ്രമം! നിങ്ങൾ {reading_time} സമയത്തിനുള്ളിൽ {accuracy}% കൃത്യതയോടെ വായിച്ചു. "
+            f"ശരിയായ വാക്കുകൾ കൂടുതൽ പരിശീലിക്കുക, തുടർന്നും മെച്ചപ്പെടാൻ ശ്രമിക്കുക!"
         )
     else:
         url = "https://api.openai.com/v1/chat/completions"
@@ -303,11 +313,11 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
         
         system_prompt = (
             "You are an experienced and encouraging reading tutor for children with dyslexia.\n"
-            "Your job is to analyze the student's reading report and provide a single paragraph of feedback.\n"
+            "Your job is to analyze the student's reading report and provide encouraging feedback in PURE MALAYALAM language (using Malayalam script).\n"
             "Your feedback MUST adhere strictly to these constraints:\n"
-            "1. Deliver the entire response in exactly one single paragraph (do not use multiple paragraphs, line breaks, or bullet points).\n"
+            "1. Deliver the entire response in exactly one single paragraph in Malayalam language (do not use multiple paragraphs, line breaks, or bullet points).\n"
             "2. Keep it minimal and concise, exactly 5 to 6 sentences total.\n"
-            "3. Focus only on: providing warm encouragement, specifying which words they got wrong or struggled with, and suggesting exactly where they should improve (e.g., long words or conjunct consonants).\n"
+            "3. Focus only on: providing warm encouragement, specifying which words they got wrong, explaining the meanings of the fully wrong words from the provided dictionary definitions in simple Malayalam, and suggesting exactly where they should improve (e.g., long words or conjunct consonants).\n"
             "Ensure the tone is supportive, positive, and friendly. Avoid critical language."
         )
         
@@ -321,7 +331,8 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
             "averageSpeed": average_speed,
             "incorrectWordList": incorrect_word_list,
             "partialWordList": partial_word_list,
-            "observations": observations
+            "observations": observations,
+            "incorrectWordDefinitions": incorrect_word_definitions
         }, ensure_ascii=False)
         
         body = json.dumps({
@@ -346,8 +357,8 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
         except Exception as error:
             logger.warning(f"Failed to generate tutor feedback from OpenAI: {error}")
             feedback_text = (
-                f"Great effort today! You read with {accuracy}% accuracy in {reading_time}. "
-                f"You got {correct_words} words correct. Keep practicing to improve further!"
+                f"വളരെ നല്ല ശ്രമം! നിങ്ങൾ {reading_time} സമയത്തിനുള്ളിൽ {accuracy}% കൃത്യതയോടെ വായിച്ചു. "
+                f"ശരിയായ വാക്കുകൾ കൂടുതൽ പരിശീലിക്കുക, തുടർന്നും മെച്ചപ്പെടാൻ ശ്രമിക്കുക!"
             )
             
     audio_base64 = ""

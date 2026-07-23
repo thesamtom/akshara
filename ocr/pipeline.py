@@ -32,8 +32,14 @@ def process_image(image_path: str | Path | np.ndarray, engine: str = "gemini", *
     config = options.get("preprocess_config")
     if config is not None and not isinstance(config, PreprocessConfig):
         raise OCRConfigurationError("preprocess_config must be a PreprocessConfig instance")
-    source = load_image(image_path, config or PreprocessConfig())
-    prepared = preprocess_image(source, config or PreprocessConfig())
+    
+    if config is None:
+        # Multimodal LLM models like Gemini work much better with color/grayscale photos containing original gradients and shadows.
+        # Binarization destroys shadow borders and causes OCR failures on mobile photographs.
+        config = PreprocessConfig(adaptive_binarize=(engine != "gemini"))
+
+    source = load_image(image_path, config)
+    prepared = preprocess_image(source, config)
     backend = _build_engine(engine, options)
     result = backend.extract(prepared)
     corrections = options.get("corrections")

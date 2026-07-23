@@ -118,3 +118,27 @@ def test_gemini_engine_no_text_detected() -> None:
     fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
     with pytest.raises(NoTextDetectedError):
         engine.extract(fake_img)
+
+
+def test_pipeline_disables_binarization_for_gemini() -> None:
+    # Create a mock color image
+    fake_img = np.full((1500, 1500, 3), 200, dtype=np.uint8)
+    cv2.circle(fake_img, (750, 750), 100, (50, 100, 150), -1)
+
+    with patch("ocr.pipeline._build_engine") as mock_build:
+        mock_engine = MagicMock()
+        mock_engine.extract.return_value = OCRResult(
+            raw_text="ടെസ്റ്റ്",
+            lines=[],
+            paragraphs=[],
+            engine_used="gemini"
+        )
+        mock_build.return_value = mock_engine
+        
+        process_image(fake_img, engine="gemini")
+        
+        # Check that the image passed to extract has color/grayscale shades (not binarized)
+        mock_build.assert_called_once()
+        prepared_img = mock_engine.extract.call_args[0][0]
+        # Binarized image only has 0 and 255. Colored/optimized will have multiple distinct color values.
+        assert len(np.unique(prepared_img)) > 2

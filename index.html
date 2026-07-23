@@ -1907,7 +1907,11 @@
       cleanupAudio();
 
       if (!navigator.mediaDevices?.getUserMedia || !window.WebSocket) {
-        status.textContent = 'This browser does not support live microphone checking.';
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          status.textContent = 'Live microphone checking requires a secure context (HTTPS) when hosted. Please enable SSL/HTTPS on your Dokploy domain settings.';
+        } else {
+          status.textContent = 'This browser does not support live microphone checking.';
+        }
         return;
       }
       if (location.protocol === 'file:') {

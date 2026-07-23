@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v20';
+const CACHE_VERSION = 'v21';
 const CACHE_NAME = `akshara-cache-${CACHE_VERSION}`;
 
 // Assets to pre-cache on install

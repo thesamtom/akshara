@@ -16,6 +16,21 @@ import backend.malayalam_sandhi
 logger = logging.getLogger("akshara.definitions")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "cache.db")
+
+def _load_local_env() -> None:
+    from pathlib import Path
+    env_file = Path(__file__).resolve().parent / ".env"
+    if not env_file.is_file():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        os.environ.setdefault(name.strip(), value.strip().strip('"').strip("'"))
+
+_load_local_env()
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
@@ -324,6 +339,69 @@ def fetch_from_api(word: str) -> dict:
     # Not found in any API -> return unfound response
     return {"word": word, "found": False}
 
+def define_word_with_openai(word: str) -> dict:
+    """Uses OpenAI GPT-4o-mini to get a structured Malayalam definition fallback."""
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        logger.info("No OpenAI API key configured for Tier 4 definition lookup.")
+        return {"word": word, "found": False}
+    
+    url = "https://api.openai.com/v1/chat/completions"
+    prompt = (
+        f"Provide a dictionary definition for the Malayalam word '{word}'. "
+        f"Your response must be a valid JSON object with the following fields: "
+        f"\"definition\" (English definition of the word, keep it concise), "
+        f"\"part_of_speech\" (e.g. Noun, Verb, Adjective), "
+        f"\"ipa\" (optional, phonetic IPA representation if you know it, or empty string), "
+        f"\"romanization\" (English transliteration/pronunciation, e.g. 'aana' for ആന). "
+        f"Respond ONLY with the JSON object, do not wrap in markdown code blocks."
+    )
+    
+    try:
+        req_data = json.dumps({
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a bilingual Malayalam-English lexicographer. You output only valid raw JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.1,
+            "response_format": {"type": "json_object"}
+        }).encode("utf-8")
+        
+        req = urllib.request.Request(
+            url,
+            data=req_data,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            content = data["choices"][0]["message"]["content"].strip()
+            res = json.loads(content)
+            return {
+                "word": word,
+                "found": True,
+                "definition": res.get("definition", ""),
+                "part_of_speech": res.get("part_of_speech", ""),
+                "ipa": res.get("ipa", ""),
+                "romanization": res.get("romanization", ""),
+                "attribution": "Definitions generated via OpenAI GPT"
+            }
+    except Exception as e:
+        logger.warning(f"OpenAI definition lookup failed for '{word}': {e}")
+        return {"word": word, "found": False}
+
+
 def lookup_word(word: str) -> dict:
     """Public wrapper to look up a word with NFC normalization and caching."""
     if not word or not word.strip():
@@ -343,18 +421,34 @@ def lookup_word(word: str) -> dict:
     if res.get("found"):
         return res
 
-    # Sandhi Fallback (Tier 2 known suffixes & Tier 3 LLM fallback)
-    logger.info(f"Direct lookup unfound for '{normalized}'. Attempting Sandhi fallback.")
-    sandhi_res = backend.malayalam_sandhi.lookup_sandhi_compound(normalized, fetch_from_api)
-    if sandhi_res and sandhi_res.get("found"):
-        cache_definition(
-            word=normalized,
-            found=True,
-            definition=sandhi_res.get("definition"),
-            part_of_speech=sandhi_res.get("part_of_speech"),
-            source_url=sandhi_res.get("source_url"),
-            raw_json=json.dumps(sandhi_res, ensure_ascii=False)
-        )
-        return sandhi_res
+    # Malayalam-specific fallbacks (Sandhi & LLM translation)
+    if re.search(r"[\u0D00-\u0D7F]", normalized):
+        # Sandhi Fallback (Tier 2 known suffixes & Tier 3 LLM fallback)
+        logger.info(f"Direct lookup unfound for '{normalized}'. Attempting Sandhi fallback.")
+        sandhi_res = backend.malayalam_sandhi.lookup_sandhi_compound(normalized, fetch_from_api)
+        if sandhi_res and sandhi_res.get("found"):
+            cache_definition(
+                word=normalized,
+                found=True,
+                definition=sandhi_res.get("definition"),
+                part_of_speech=sandhi_res.get("part_of_speech"),
+                source_url=sandhi_res.get("source_url"),
+                raw_json=json.dumps(sandhi_res, ensure_ascii=False)
+            )
+            return sandhi_res
+
+        # Tier 4: OpenAI LLM Fallback for definitions
+        logger.info(f"Sandhi lookup unfound for '{normalized}'. Attempting OpenAI fallback.")
+        openai_res = define_word_with_openai(normalized)
+        if openai_res.get("found"):
+            cache_definition(
+                word=normalized,
+                found=True,
+                definition=openai_res.get("definition"),
+                part_of_speech=openai_res.get("part_of_speech"),
+                source_url=openai_res.get("source_url"),
+                raw_json=json.dumps(openai_res, ensure_ascii=False)
+            )
+            return openai_res
 
     return res

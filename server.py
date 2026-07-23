@@ -301,8 +301,8 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
     openai_key = os.environ.get("OPENAI_API_KEY")
     if not openai_key:
         feedback_text = (
-            f"വളരെ നല്ല ശ്രമം! നിങ്ങൾ {reading_time} സമയത്തിനുള്ളിൽ {accuracy}% കൃത്യതയോടെ വായിച്ചു. "
-            f"ശരിയായ വാക്കുകൾ കൂടുതൽ പരിശീലിക്കുക, തുടർന്നും മെച്ചപ്പെടാൻ ശ്രമിക്കുക!"
+            f"Great effort today! You read with {accuracy}% accuracy in {reading_time}. "
+            f"You got {correct_words} words correct. Keep practicing to improve further!"
         )
     else:
         url = "https://api.openai.com/v1/chat/completions"
@@ -313,11 +313,11 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
         
         system_prompt = (
             "You are an experienced and encouraging reading tutor for children with dyslexia.\n"
-            "Your job is to analyze the student's reading report and provide encouraging feedback in PURE MALAYALAM language (using Malayalam script).\n"
+            "Your job is to analyze the student's reading report and provide encouraging feedback in English.\n"
             "Your feedback MUST adhere strictly to these constraints:\n"
-            "1. Deliver the entire response in exactly one single paragraph in Malayalam language (do not use multiple paragraphs, line breaks, or bullet points).\n"
+            "1. Deliver the entire response in exactly one single paragraph in English language (do not use multiple paragraphs, line breaks, or bullet points).\n"
             "2. Keep it minimal and concise, exactly 5 to 6 sentences total.\n"
-            "3. Focus only on: providing warm encouragement, specifying which words they got wrong, explaining the meanings of the fully wrong words from the provided dictionary definitions in simple Malayalam, and suggesting exactly where they should improve (e.g., long words or conjunct consonants).\n"
+            "3. Focus only on: providing warm encouragement, specifying which words they got wrong, explaining the meanings of the fully wrong words from the provided dictionary definitions in simple English, and suggesting exactly where they should improve (e.g., long words or conjunct consonants).\n"
             "Ensure the tone is supportive, positive, and friendly. Avoid critical language."
         )
         
@@ -357,8 +357,8 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
         except Exception as error:
             logger.warning(f"Failed to generate tutor feedback from OpenAI: {error}")
             feedback_text = (
-                f"വളരെ നല്ല ശ്രമം! നിങ്ങൾ {reading_time} സമയത്തിനുള്ളിൽ {accuracy}% കൃത്യതയോടെ വായിച്ചു. "
-                f"ശരിയായ വാക്കുകൾ കൂടുതൽ പരിശീലിക്കുക, തുടർന്നും മെച്ചപ്പെടാൻ ശ്രമിക്കുക!"
+                f"Great effort today! You read with {accuracy}% accuracy in {reading_time}. "
+                f"You got {correct_words} words correct. Keep practicing to improve further!"
             )
             
     audio_base64 = ""

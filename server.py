@@ -303,21 +303,12 @@ async def tutor_feedback(payload: dict) -> JSONResponse:
         
         system_prompt = (
             "You are an experienced and encouraging reading tutor for children with dyslexia.\n"
-            "Your job is to analyze the student's reading report and provide supportive, personalized feedback.\n"
-            "Your feedback should:\n"
-            "- Start with positive encouragement.\n"
-            "- Mention what the learner did well.\n"
-            "- Explain the most common pronunciation mistakes.\n"
-            "- Identify any reading patterns observed.\n"
-            "- Suggest practical techniques to improve.\n"
-            "- Recommend which types of words should be practiced.\n"
-            "- End with a short motivational message.\n\n"
-            "Keep the response:\n"
-            "- Friendly, supportive, positive, and easy to understand.\n"
-            "- Around 120–180 words.\n"
-            "- Never discourage or criticize the learner.\n\n"
-            "Avoid phrases like 'You failed', 'You performed poorly', 'Wrong pronunciation'.\n"
-            "Instead use encouraging language such as 'Let's practice this together.', 'You're improving.', 'With a little more practice...', 'Great effort today.'"
+            "Your job is to analyze the student's reading report and provide a single paragraph of feedback.\n"
+            "Your feedback MUST adhere strictly to these constraints:\n"
+            "1. Deliver the entire response in exactly one single paragraph (do not use multiple paragraphs, line breaks, or bullet points).\n"
+            "2. Keep it minimal and concise, exactly 5 to 6 sentences total.\n"
+            "3. Focus only on: providing warm encouragement, specifying which words they got wrong or struggled with, and suggesting exactly where they should improve (e.g., long words or conjunct consonants).\n"
+            "Ensure the tone is supportive, positive, and friendly. Avoid critical language."
         )
         
         user_prompt = json.dumps({

@@ -1857,63 +1857,6 @@
       convertButton.disabled = true;
       output.value = '';
 
-      if (navigator.onLine) {
-        status.innerHTML = '<span class="spinner"></span>Transcribing with Gemini OCR…';
-        try {
-          // Canvas compression can strip/mismangle orientation headers on direct camera captures.
-          // Bypass compression if the file size is under 10MB to preserve EXIF data.
-          let uploadBlob = imageFile;
-          if (imageFile.size > 10 * 1024 * 1024) {
-            uploadBlob = await compressImageForUpload(imageFile);
-          }
-          const formData = new FormData();
-          formData.append('file', uploadBlob, imageFile.name || 'image.jpg');
-
-          const response = await fetch('/api/ocr', {
-            method: 'POST',
-            headers: { 'ngrok-skip-browser-warning': 'true' },
-            body: formData
-          });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.detail || 'Cloud OCR request failed.');
-          }
-
-          const data = await response.json();
-          let rawText = (data.raw_text || '').trim();
-
-          if (navigator.onLine) {
-            try {
-              const cleanResponse = await fetch('/api/clean', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: rawText })
-              });
-              if (cleanResponse.ok) {
-                const cleanData = await cleanResponse.json();
-                if (cleanData.cleaned_text) {
-                  rawText = cleanData.cleaned_text.trim();
-                }
-              }
-            } catch (e) {
-              console.warn('OpenAI cleanup failed:', e);
-            }
-          }
-
-          output.value = rawText;
-          const isOnline = navigator.onLine;
-          playButton.disabled = !output.value || !isOnline;
-          readingButton.disabled = !output.value || !isOnline;
-          renderComparison(output.value, '');
-          status.textContent = 'Conversion complete (Gemini OCR).';
-          return;
-        } catch (error) {
-          console.warn('Gemini OCR API failed, falling back to local offline OCR:', error);
-        }
-      }
-
-      // Offline or network fallback path
       try {
         let text = await processImageLocalTesseract(imageFile);
 
@@ -1940,7 +1883,7 @@
         playButton.disabled = !output.value || !isOnline;
         readingButton.disabled = !output.value || !isOnline;
         renderComparison(output.value, '');
-        status.textContent = 'Conversion complete (Offline Local OCR).';
+        status.textContent = 'Conversion complete (Tesseract OCR).';
       } catch (error) {
         console.error(error);
         status.textContent = 'Conversion failed. Please try another image.';

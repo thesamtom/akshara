@@ -144,15 +144,15 @@ async def health() -> JSONResponse:
     return JSONResponse({
         "sarvam_tts_configured": bool(os.environ.get("SARVAM_TTS_API_KEY")),
         "sarvam_stt_configured": bool(os.environ.get("SARVAM_STT_API_KEY")),
-        "gemini_ocr_configured": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
+        "gemini_ocr_configured": bool(os.environ.get("NVIDIA_API_KEY") or os.environ.get("NGC_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
         "openai_cleanup_configured": bool(os.environ.get("OPENAI_API_KEY")),
     })
 
 
 @app.post("/api/ocr")
 async def process_ocr_image(file: UploadFile = File(...)) -> JSONResponse:
-    if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
-        raise HTTPException(503, "GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY to your .env file.")
+    if not (os.environ.get("NVIDIA_API_KEY") or os.environ.get("NGC_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
+        raise HTTPException(503, "NVIDIA_API_KEY is not configured on the server. Add NVIDIA_API_KEY to your .env file.")
 
     contents = await file.read()
     if not contents:

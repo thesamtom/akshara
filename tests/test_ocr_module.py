@@ -63,61 +63,111 @@ def test_no_text_error_is_typed() -> None:
 
 
 def test_gemini_engine_extract_success() -> None:
-    mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = "മലയാളം വായന"
-    mock_client.models.generate_content.return_value = mock_response
-
-    engine = GeminiEngine(api_key="fake-key", client=mock_client)
-    fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
-    res = engine.extract(fake_img)
-
-    assert res.raw_text == "മലയാളം വായന"
-    assert res.engine_used == "gemini"
-    mock_client.models.generate_content.assert_called_once()
-    args, kwargs = mock_client.models.generate_content.call_args
-    assert kwargs.get("model") == "gemini-2.5-flash"
-    assert "Malayalam OCR engine" in kwargs.get("contents")[1]
+    mock_payload = {
+        "data": [
+            {
+                "text_detections": [
+                    {
+                        "text_prediction": {
+                            "text": "മലയാളം വായന",
+                            "confidence": 0.95
+                        },
+                        "bounding_box": {
+                            "points": [
+                                {"x": 0.1, "y": 0.1},
+                                {"x": 0.5, "y": 0.1},
+                                {"x": 0.5, "y": 0.2},
+                                {"x": 0.1, "y": 0.2}
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+    mock_response.read.return_value = json.dumps(mock_payload).encode("utf-8")
+    
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        engine = GeminiEngine(api_key="fake-key")
+        fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+        res = engine.extract(fake_img)
+        
+        assert res.raw_text == "മലയാളം വായന"
+        assert res.engine_used == "gemini"
+        assert len(res.lines) == 1
+        assert res.lines[0].bbox == (10, 10, 50, 20)
+        mock_urlopen.assert_called_once()
 
 
 def test_gemini_engine_missing_api_key(monkeypatch) -> None:
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    monkeypatch.delenv("NGC_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.setattr("ocr.engines.gemini._load_local_env", lambda: None)
-    with pytest.raises(OCRConfigurationError, match="GEMINI_API_KEY"):
+    with pytest.raises(OCRConfigurationError, match="NVIDIA_API_KEY"):
         GeminiEngine()
 
 
 def test_gemini_engine_retry_on_failure() -> None:
-    mock_client = MagicMock()
+    import urllib.error
     mock_response = MagicMock()
-    mock_response.text = "വിജയം"
+    mock_payload = {
+        "data": [
+            {
+                "text_detections": [
+                    {
+                        "text_prediction": {
+                            "text": "വിജയം",
+                            "confidence": 0.98
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+    mock_response.read.return_value = json.dumps(mock_payload).encode("utf-8")
 
-    # Fail twice, succeed on 3rd attempt
-    mock_client.models.generate_content.side_effect = [
-        RuntimeError("Transient 503 error"),
-        RuntimeError("Timeout"),
-        mock_response
-    ]
+    mock_context = MagicMock()
+    mock_context.__enter__.return_value = mock_response
 
-    engine = GeminiEngine(api_key="fake-key", client=mock_client)
-    fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
-    res = engine.extract(fake_img)
-
-    assert res.raw_text == "വിജയം"
-    assert mock_client.models.generate_content.call_count == 3
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        # Raise errors twice, then succeed
+        mock_urlopen.side_effect = [
+            urllib.error.HTTPError("http://foo", 429, "Too Many Requests", {}, None),
+            urllib.error.URLError("Timeout"),
+            mock_context
+        ]
+        
+        with patch("time.sleep") as mock_sleep:  # Mock sleep to run tests instantly
+            engine = GeminiEngine(api_key="fake-key")
+            fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+            res = engine.extract(fake_img)
+            
+            assert res.raw_text == "വിജയം"
+            assert mock_urlopen.call_count == 3
 
 
 def test_gemini_engine_no_text_detected() -> None:
-    mock_client = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = ""
-    mock_client.models.generate_content.return_value = mock_response
+    mock_payload = {
+        "data": [
+            {
+                "text_detections": []
+            }
+        ]
+    }
+    mock_response.read.return_value = json.dumps(mock_payload).encode("utf-8")
 
-    engine = GeminiEngine(api_key="fake-key", client=mock_client)
-    fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
-    with pytest.raises(NoTextDetectedError):
-        engine.extract(fake_img)
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        engine = GeminiEngine(api_key="fake-key")
+        fake_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+        with pytest.raises(NoTextDetectedError):
+            engine.extract(fake_img)
 
 
 def test_pipeline_disables_binarization_for_gemini() -> None:

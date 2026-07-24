@@ -27,7 +27,11 @@ def _load_local_env() -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         name, value = line.split("=", 1)
-        os.environ.setdefault(name.strip(), value.strip().strip('"').strip("'"))
+        k = name.strip()
+        v = value.strip().strip('"').strip("'")
+        current = os.environ.get(k)
+        if not current or current.startswith("replace-with-") or current.strip() == "":
+            os.environ[k] = v
 
 _load_local_env()
 
@@ -78,8 +82,10 @@ def get_cached_definition(word: str) -> dict | None:
             )
             with urllib.request.urlopen(req, timeout=5) as response:
                 data = json.loads(response.read().decode('utf-8'))
-                if data and data[0].get("found"):
+                if data:
                     row = data[0]
+                    if not row.get("found"):
+                        return {"word": row["word"], "found": False}
                     if row.get("raw_json"):
                         try:
                             return json.loads(row["raw_json"])
@@ -101,10 +107,12 @@ def get_cached_definition(word: str) -> dict | None:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM word_definitions WHERE word = ? AND found = 1", (word,))
+        cursor.execute("SELECT * FROM word_definitions WHERE word = ?", (word,))
         row = cursor.fetchone()
         conn.close()
         if row:
+            if not row["found"]:
+                return {"word": row["word"], "found": False}
             if row["raw_json"]:
                 try:
                     return json.loads(row["raw_json"])
@@ -131,10 +139,7 @@ def cache_definition(
     source_url: str | None = None,
     raw_json: str | None = None
 ) -> None:
-    """Saves successful lookup result to cache (Supabase + local SQLite fallback)."""
-    # Do not write negative (unfound) entries to cache
-    if not found or not definition:
-        return
+    """Saves lookup result to cache (Supabase + local SQLite fallback), including negative lookups."""
     # 1. Save to Supabase
     if SUPABASE_URL and SUPABASE_KEY:
         try:
@@ -160,7 +165,7 @@ def cache_definition(
             )
             with urllib.request.urlopen(req, timeout=5):
                 pass
-            logger.info(f"Successfully cached '{word}' in Supabase.")
+            logger.info(f"Successfully cached '{word}' in Supabase (found={found}).")
         except Exception as e:
             logger.error(f"Failed to save '{word}' to Supabase cache: {e}")
 
@@ -174,7 +179,7 @@ def cache_definition(
         """, (word, found, definition, part_of_speech, source_url, raw_json))
         conn.commit()
         conn.close()
-        logger.info(f"Successfully cached '{word}' in SQLite.")
+        logger.info(f"Successfully cached '{word}' in SQLite (found={found}).")
     except Exception as e:
         logger.error(f"Failed to save '{word}' to SQLite cache: {e}")
 
@@ -399,7 +404,7 @@ def define_word_with_openai(word: str) -> dict:
             }
     except Exception as e:
         logger.warning(f"OpenAI definition lookup failed for '{word}': {e}")
-        return {"word": word, "found": False}
+        return {"word": word, "found": False, "transient_error": True}
 
 
 def lookup_word(word: str) -> dict:
@@ -450,5 +455,12 @@ def lookup_word(word: str) -> dict:
                 raw_json=json.dumps(openai_res, ensure_ascii=False)
             )
             return openai_res
+        else:
+            # Only cache negative entry if it wasn't a transient network/API error
+            if not openai_res.get("transient_error"):
+                cache_definition(word=normalized, found=False)
+            return openai_res
 
+    # For non-Malayalam words that are not found by direct API
+    cache_definition(word=normalized, found=False)
     return res

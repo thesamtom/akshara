@@ -50,7 +50,8 @@ def test_cache_and_lookup_not_found(tmp_path) -> None:
         # Cache as not found
         definitions.cache_definition("invalid_word", False)
         
-        # Lookup should hit cache
-        res = definitions.lookup_word("invalid_word")
-        assert res["found"] is False
-        assert "definition" not in res or res["definition"] is None
+        # Mock fetch_from_api to verify it's not called (proving negative cache hit)
+        with patch("definitions.fetch_from_api") as mock_fetch:
+            res = definitions.lookup_word("invalid_word")
+            assert res["found"] is False
+            mock_fetch.assert_not_called()

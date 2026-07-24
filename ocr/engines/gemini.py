@@ -33,9 +33,7 @@ def _load_local_env() -> None:
         name, value = line.split("=", 1)
         k = name.strip()
         v = value.strip().strip('"').strip("'")
-        current = os.environ.get(k)
-        if not current or current.startswith("replace-with-") or current.strip() == "":
-            os.environ[k] = v
+        os.environ[k] = v
 
 
 class GeminiEngine(OCREngine):
